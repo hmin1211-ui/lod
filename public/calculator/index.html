@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>어둠의전설 데미지 계산기</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Dark Ages Damage Lab</p>
+          <h1>어둠의전설 데미지 계산기</h1>
+        </div>
+        <div class="top-actions">
+          <div class="file-actions">
+            <button class="file-button" id="exportButton" type="button">내보내기</button>
+            <button class="file-button" id="importButton" type="button">불러오기</button>
+            <input id="importFile" type="file" accept="application/json,.json" hidden />
+          </div>
+          <div class="skill-tabs" role="tablist" aria-label="스킬 선택">
+            <button class="skill-tab active" type="button" data-skill="crasher" role="tab" aria-selected="true">
+              크래셔
+            </button>
+            <button class="skill-tab" type="button" data-skill="meteor" role="tab" aria-selected="false">
+              메테오
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <section class="workspace">
+        <aside class="input-panel" aria-label="입력값">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow" id="inputMode">크래셔</p>
+              <h2>입력</h2>
+            </div>
+            <button class="local-save-button" id="localSaveButton" type="button" aria-label="브라우저에 저장" title="브라우저에 저장">
+              저장
+            </button>
+          </div>
+          <div class="input-table-wrap">
+            <table class="input-table">
+              <thead>
+                <tr>
+                  <th>항목</th>
+                  <th>스펙</th>
+                  <th>환산값</th>
+                </tr>
+              </thead>
+              <tbody id="inputRows"></tbody>
+            </table>
+          </div>
+        </aside>
+
+        <section class="result-panel" aria-label="출력값">
+          <div class="panel-heading result-heading">
+            <div>
+              <p class="eyebrow" id="resultMode">크래셔</p>
+              <h2>데미지 계산</h2>
+            </div>
+            <div class="summary-strip" id="summaryStrip"></div>
+          </div>
+
+          <div class="result-table-wrap">
+            <table class="result-table">
+              <thead id="resultHead"></thead>
+              <tbody id="resultRows"></tbody>
+            </table>
+          </div>
+          <section class="reverse-card" id="reversePanel"></section>
+        </section>
+      </section>
+    </main>
+
+    <dialog class="monster-dialog" id="monsterDialog">
+      <form class="monster-form" id="monsterForm" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Custom Monster</p>
+            <h2>몬스터 추가</h2>
+          </div>
+          <button class="icon-button" id="closeMonsterDialog" type="button" aria-label="닫기" title="닫기">×</button>
+        </div>
+        <label>
+          <span>장소</span>
+          <input class="monster-input" id="monsterSection" name="section" type="text" list="monsterSectionOptions" autocomplete="off" required />
+          <datalist id="monsterSectionOptions">
+            <option value="백유"></option>
+            <option value="나겔링"></option>
+            <option value="연습장"></option>
+          </datalist>
+        </label>
+        <label>
+          <span>몬스터명</span>
+          <input class="monster-input" id="monsterName" name="name" type="text" autocomplete="off" required />
+        </label>
+        <label>
+          <span>AC</span>
+          <input class="monster-input" id="monsterAc" name="ac" type="number" step="any" required />
+        </label>
+        <label>
+          <span>체력</span>
+          <input class="monster-input" id="monsterHp" name="hp" type="number" step="1" min="0" placeholder="선택" />
+        </label>
+        <button class="monster-button" type="submit">추가</button>
+      </form>
+    </dialog>
+
+    <dialog class="monster-dialog" id="sectionOrderDialog">
+      <form class="monster-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Section Order</p>
+            <h2>순서 변경</h2>
+          </div>
+          <button class="icon-button" id="closeSectionOrderDialog" type="button" aria-label="닫기" title="닫기">×</button>
+        </div>
+        <div class="section-order-list" id="sectionOrderList"></div>
+      </form>
+    </dialog>
+
+    <dialog class="monster-dialog monster-info-dialog" id="baekyuInfoDialog">
+      <form class="monster-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Monster Info</p>
+            <h2>백유 몬스터 정보</h2>
+          </div>
+          <button class="icon-button" id="closeBaekyuInfoDialog" type="button" aria-label="닫기" title="닫기">×</button>
+        </div>
+        <div class="monster-info-content" id="baekyuInfoContent"></div>
+      </form>
+    </dialog>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

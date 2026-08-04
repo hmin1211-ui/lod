@@ -1,0 +1,22 @@
+html,
+body {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #f5f7f4;
+}
+
+.site-frame {
+  width: 100vw;
+  min-height: 100vh;
+}
+
+.calculator-frame {
+  display: block;
+  width: 100%;
+  min-height: 100vh;
+  border: 0;
+}
