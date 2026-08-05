@@ -502,7 +502,7 @@
     c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
     c.move = applyManual(inputState, "move", (Number(s.move) || 0) * 0.4);
     c.madType = madCoefficient(s.madType, c.ability);
-    c.furyLevel = levelCoefficient(s.furyLevel, 4.984914075823167, 84.522023673402);
+    c.furyLevel = levelCoefficient(s.furyLevel, 4.984914075823167, 84.53388511);
     c.dashLevel = levelCoefficient(s.dashLevel, 3.724984600805496, 37.25);
     c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
     c.arc = applyManual(inputState, "arc", (Number(s.arc) || 0) * 13);
@@ -531,9 +531,9 @@
       const percentWithoutFocus = acWeight * damageIncrease * (buffWeight - c.focus);
       const base = Number(s.basePhysical) || 0;
       const flat = c.flatPhysical;
+      const appliesFlatBonus = normalizeElementName(s.elementAttack) === "생(암)공" && monster.kind !== "boss";
       const useHot = monster.kind !== "boss";
-      const useFlat = monster.kind !== "boss";
-      const flatBonus = monster.name === "발록" ? flat : useFlat ? flat : 0;
+      const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
       const mad = base * c.madType * percent * hotTimeWeight + flatBonus;
       const crasher = base * c.jobType * percent * hotTimeWeight + flatBonus;
@@ -792,7 +792,7 @@
       (selectedReverseBuffs.has("집중") ? 1 : 0) +
       (selectedReverseBuffs.has("나르") ? 1 : 0) +
       (selectedReverseBuffs.has("트랩") ? 1 : 0);
-    const dummyAcWeight = 2;
+    const dummyAcWeight = defenseRate(100 + (result.conversions.ring1 || 0) + (result.conversions.ring2 || 0));
     const originalDivider = dummyAcWeight * damageIncrease * currentBuffWeight;
     const debuffTotal = reverseDebuffTotal(reverse.debuffs, targetAc, elementDebuffValue);
     const targetPercent = defenseRate(targetAc) * damageIncrease * (selectedBuffWeight / debuffTotal);
