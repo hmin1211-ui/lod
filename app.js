@@ -3,7 +3,7 @@
   const zeroToThree = [0, 1, 2, 3];
   const zeroToSix = [0, 1, 2, 3, 4, 5, 6];
   const zeroToTenUpgrade = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "업글"];
-  const jobTypes = ["순수", "전직"];
+  const jobTypes = ["순수", "도전", "직전/법전"];
   const madTypes = ["일반", "업글"];
   const curses = ["없음", "데프", "프라보", "어각", "아나테마"];
   const crasherElements = ["숲철공", "수토공", "생암", "생공"];
@@ -157,7 +157,7 @@
   const defaults = {
     crasher: {
       specs: {
-        jobType: "전직",
+        jobType: "도전",
         madType: "일반",
         furyLevel: 0,
         dashLevel: 0,
@@ -302,6 +302,9 @@
 
   function migrateSavedSkillState(skill) {
     const skillState = state[skill];
+    if (skill === "crasher" && skillState.specs.jobType === "전직") {
+      skillState.specs.jobType = "도전";
+    }
     if (skillState.specs.curse === "데프" && Number(skillState.convManual.curse) === 60) {
       delete skillState.convManual.curse;
     }
@@ -440,6 +443,8 @@
 
   function calculateCrasher(inputState = state.crasher) {
     const s = inputState.specs;
+    const isPureJob = s.jobType === "순수";
+    const usesJobSkill = s.jobType !== "직전/법전";
     const c = {};
     c.jobType = jobTypeValue(s.jobType);
     c.ability = applyManual(
@@ -502,12 +507,13 @@
         c.ability *
         hotTimeWeight;
       const fury = furyBase * c.furyLevel + flatBonus;
-      const jobSkillName = s.jobType === "순수" ? "대쉬" : "암살";
-      const jobSkillDamage =
-        s.jobType === "순수"
+      const jobSkillName = isPureJob ? "대쉬" : "암살";
+      const jobSkillDamage = usesJobSkill
+        ? isPureJob
           ? furyBase * c.dashLevel + flatBonus
-          : base * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus;
-      const totalDamage = mad + crasher + fury + jobSkillDamage;
+          : base * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus
+        : 0;
+      const totalDamage = mad + crasher + fury + (usesJobSkill ? jobSkillDamage : 0);
       const total = monster.kind === "boss" ? Math.trunc(totalDamage) : null;
       const balrogShot = monster.kind === "boss" ? 36000000 - total : null;
       return {
@@ -523,6 +529,7 @@
         fury,
         jobSkillName,
         jobSkillDamage,
+        usesJobSkill,
         totalDamage,
         total,
         balrogShot,
@@ -958,13 +965,20 @@
   function renderResults(result) {
     const container = document.querySelector(".result-table-wrap");
     if (state.skill === "crasher") {
-      const isPure = state.crasher.specs.jobType === "순수";
+      const jobType = state.crasher.specs.jobType;
+      const isPure = jobType === "순수";
+      const hideJobSkill = jobType === "직전/법전";
       const crasherLabel = isPure ? "데빌" : "크래셔";
       const jobSkillLabel = isPure ? "대쉬" : "암살";
-    container.innerHTML = renderGroupedTables(result.rows, {
-      tableClass: "crasher-result",
-      colWidths: [7.5, 6.2, 6.4, 6.4, 7.1, 7.1, 4.6, 6.1, 7.9, 7.9, 7.9, 7.9, 7.9, 9.1],
-        headers: ["몬스터", "기존 AC", "AC변화", "AC가중치", "데미지증가", "버프가중치", "핫타임", "퍼센트", "매드", crasherLabel, "퓨리", jobSkillLabel, "합계", "비고"],
+      const headers = ["몬스터", "기존 AC", "AC변화", "AC가중치", "데미지증가", "버프가중치", "핫타임", "퍼센트", "매드", crasherLabel, "퓨리"];
+      if (!hideJobSkill) headers.push(jobSkillLabel);
+      headers.push("합계", "비고");
+      container.innerHTML = renderGroupedTables(result.rows, {
+        tableClass: "crasher-result",
+        colWidths: hideJobSkill
+          ? [8.2, 6.7, 6.9, 6.9, 7.6, 7.6, 5.1, 6.6, 8.4, 8.4, 8.4, 8.4, 11.0]
+          : [7.5, 6.2, 6.4, 6.4, 7.1, 7.1, 4.6, 6.1, 7.9, 7.9, 7.9, 7.9, 7.9, 9.1],
+        headers,
         rowRenderer: (row) => {
           const note =
             row.custom && row.hp
@@ -975,6 +989,9 @@
                 : `<span class="damage-note">발록 샷</span>`
               : "";
           const deleteButton = row.custom ? `<button class="delete-monster" type="button" data-monster-id="${row.id}">삭제</button>` : "";
+          const jobSkillCell = hideJobSkill
+            ? ""
+            : `<td data-label="${jobSkillLabel}" class="damage-strong">${formatNumber(row.jobSkillDamage)}</td>`;
           return `<tr>
             <td data-label="몬스터">${row.name}${deleteButton}</td>
             <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
@@ -987,7 +1004,7 @@
             <td data-label="매드" class="damage-strong">${formatNumber(row.mad)}</td>
             <td data-label="${crasherLabel}" class="damage-strong">${formatNumber(row.crasher)}</td>
             <td data-label="퓨리" class="damage-strong">${formatNumber(row.fury)}</td>
-            <td data-label="${jobSkillLabel}" class="damage-strong">${formatNumber(row.jobSkillDamage)}</td>
+            ${jobSkillCell}
             <td data-label="합계" class="damage-total">${formatNumber(row.totalDamage)}</td>
             <td data-label="비고">${note}</td>
           </tr>`;
