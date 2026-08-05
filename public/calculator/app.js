@@ -11,6 +11,7 @@
   const meteorElements = ["숲철공", "수토공", "생암", "생공", "암암"];
   const hotTimes = ["Off", "평일", "주말"];
   const reverseDebuffs = ["호르/자보", "콜라마", "매프"];
+  const meteorCastMana = 12960;
 
   const curseValueCrasher = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
   const curseValueMeteor = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
@@ -214,7 +215,7 @@
         extraElement: 0,
         horde: "Off",
       },
-      conv: { oneTickPlusMedi: 12960 },
+      conv: { castMana: meteorCastMana },
     },
   };
 
@@ -600,7 +601,7 @@
     const med = meditationTable[Number(s.meditation)] || { time: 3, recovery: 0 };
     c.oneTick = applyManual(inputState, "oneTick", Math.floor((Number(s.baseMagic) || 0) * (med.recovery / 100) * (1 + c.earring)));
     c.meditation = applyManual(inputState, "meditation", c.oneTick * (med.time - 3));
-    c.oneTickPlusMedi = defaults.meteor.conv.oneTickPlusMedi;
+    c.castMana = defaults.meteor.conv.castMana;
 
     const resolvedSpecs = { ...s };
     resolvedSpecs.oneTick = Math.floor(((Number(s.baseMagic) || 0) / 5) * (1 + c.earring));
@@ -622,9 +623,9 @@
       const hotTimeWeight = 1 + c.hotTime;
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
-      const manaBase = c.oneTickPlusMedi;
+      const castManaCost = c.castMana * c.manaReduction;
       const meteorDamage = (mana) =>
-        (mana - manaBase * c.manaReduction) * 1.5 * percent * hotTimeWeight;
+        (mana - castManaCost) * 1.5 * percent * hotTimeWeight;
       const oneTickOneMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi);
       const twoTickOneMediDamage = meteorDamage(resolvedSpecs.oneTick * 2 + c.meditation);
       const twoTickTwoMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi * 2);
