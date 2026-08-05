@@ -1075,6 +1075,14 @@ td.factor-hot {
 }
 
 @media (max-width: 980px) {
+  .result-table {
+    table-layout: auto;
+  }
+
+  .result-table colgroup {
+    display: none;
+  }
+
   .result-table,
   .result-table thead,
   .result-table tbody,
@@ -1084,11 +1092,12 @@ td.factor-hot {
     width: 100%;
   }
 
-  .crasher-result th,
-  .crasher-result td,
-  .meteor-result th,
-  .meteor-result td {
+  .result-table.crasher-result th,
+  .result-table.crasher-result td,
+  .result-table.meteor-result th,
+  .result-table.meteor-result td {
     width: 100%;
+    max-width: none;
   }
 
   .result-table thead {
@@ -1113,6 +1122,7 @@ td.factor-hot {
     display: grid;
     grid-template-columns: minmax(92px, 39%) minmax(0, 1fr);
     align-items: center;
+    min-width: 0;
     min-height: 30px;
     border-bottom: 1px solid #edf1ef;
     text-align: right;
