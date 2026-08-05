@@ -214,7 +214,7 @@
         extraElement: 0,
         horde: "Off",
       },
-      conv: { oneTickPlusMedi: 0 },
+      conv: { oneTickPlusMedi: 12960 },
     },
   };
 
@@ -327,6 +327,7 @@
     delete skillState.convManual.madType;
     delete skillState.convManual.furyLevel;
     delete skillState.convManual.dashLevel;
+    delete skillState.convManual.oneTickPlusMedi;
     delete skillState.specManual.oneTick;
     if (!Array.isArray(skillState.reverse?.debuffs)) {
       skillState.reverse = { ...defaultReverseState(skill), ...(skillState.reverse || {}), debuffs: [] };
@@ -599,7 +600,7 @@
     const med = meditationTable[Number(s.meditation)] || { time: 3, recovery: 0 };
     c.oneTick = applyManual(inputState, "oneTick", Math.floor((Number(s.baseMagic) || 0) * (med.recovery / 100) * (1 + c.earring)));
     c.meditation = applyManual(inputState, "meditation", c.oneTick * (med.time - 3));
-    c.oneTickPlusMedi = applyManual(inputState, "oneTickPlusMedi", defaults.meteor.conv.oneTickPlusMedi);
+    c.oneTickPlusMedi = defaults.meteor.conv.oneTickPlusMedi;
 
     const resolvedSpecs = { ...s };
     resolvedSpecs.oneTick = Math.floor(((Number(s.baseMagic) || 0) / 5) * (1 + c.earring));
