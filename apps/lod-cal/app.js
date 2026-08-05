@@ -585,8 +585,8 @@
       속공: { factor: 1.3, bonus: c.extraElement + c.horde },
       생암: { factor: 1.2, bonus: c.extraElement },
       "생(암)공": { factor: 1.1, bonus: c.extraElement },
-      암방: { factor: 0.9, bonus: c.extraElement },
-      암암: { factor: 0.75, bonus: c.extraElement },
+      암방: { factor: 0.9, bonus: -c.extraElement - c.horde },
+      암암: { factor: 0.75, bonus: -c.extraElement },
     };
     const selected = table[normalizeElementName(name)] || table.속공;
     return selected.factor ** (2 + c.elementBoost) * (1 + selected.bonus);
@@ -729,9 +729,16 @@
   }
 
   function meteorElementValue(name, c) {
-    const factors = { 숲철공: 1.35, 속공: 1.3, 생암: 1.2, "생(암)공": 1.1, 암방: 0.9, 암암: 0.75 };
-    const factor = factors[normalizeElementName(name)] || factors.암암;
-    return roundDown(factor ** (2 + c.elementBoost) * (1 + c.extraElement), 4);
+    const table = {
+      숲철공: { factor: 1.35, bonus: c.extraElement },
+      속공: { factor: 1.3, bonus: c.extraElement },
+      생암: { factor: 1.2, bonus: c.extraElement },
+      "생(암)공": { factor: 1.1, bonus: c.extraElement },
+      암방: { factor: 0.9, bonus: -c.extraElement - c.horde },
+      암암: { factor: 0.75, bonus: -c.extraElement },
+    };
+    const selected = table[normalizeElementName(name)] || table.암암;
+    return roundDown(selected.factor ** (2 + c.elementBoost) * (1 + selected.bonus), 4);
   }
 
   function getCurrentResult() {
