@@ -1,5 +1,5 @@
 (function () {
-  const onOff = ["On", "Off"];
+  const onOff = ["Off", "On"];
   const zeroToThree = [0, 1, 2, 3];
   const zeroToSix = [0, 1, 2, 3, 4, 5, 6];
   const zeroToTenUpgrade = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "업글"];
@@ -157,53 +157,25 @@
   const defaults = {
     crasher: {
       specs: {
-        jobType: "도전",
+        jobType: "순수",
         madType: "일반",
         furyLevel: 0,
         dashLevel: 0,
         downFourWayLevel: 0,
-        ability: 230,
-        basePhysical: 5098689,
-        str: 269,
-        con: 264,
-        ring1: 10,
-        ring2: 10,
-        weapon: 5,
-        acc1: 5,
-        acc2: 5,
-        elementBoost: "On",
-        elementAttack: "수토공",
-        move: 0,
-        curse: "아나테마",
-        arc: 3,
-        abre: 0,
-        ambush: "On",
-        focus: "On",
-        trap: "Off",
-        nar: "Off",
-        hotTime: "Off",
-        extraElement: 2,
-        horde: "Off",
-      },
-      conv: { flatPhysical: 32353, strConverted: 274, conConverted: 277 },
-    },
-    meteor: {
-      specs: {
         ability: 201,
-        baseMagic: 722638,
-        meditation: 9,
-        oneTick: 153199,
-        oneTickPlusMedi: 458814,
-        earring: 3,
+        basePhysical: 1000000,
+        str: 180,
+        con: 180,
         ring1: 0,
         ring2: 0,
-        weapon: 3,
-        acc1: 2,
-        acc2: 1,
+        weapon: 0,
+        acc1: 0,
+        acc2: 0,
         elementBoost: "Off",
-        elementAttack: "암암",
-        curse: "프라보",
-        manaReduction: 20,
+        elementAttack: "숲철공",
+        move: 0,
+        curse: "없음",
+        arc: 0,
         abre: 0,
         ambush: "Off",
         focus: "Off",
@@ -213,7 +185,35 @@
         extraElement: 0,
         horde: "Off",
       },
-      conv: { oneTickPlusMedi: 12960 },
+      conv: { flatPhysical: 0, strConverted: 0, conConverted: 0 },
+    },
+    meteor: {
+      specs: {
+        ability: 201,
+        baseMagic: 1000000,
+        meditation: 0,
+        oneTick: 0,
+        oneTickPlusMedi: 0,
+        earring: 0,
+        ring1: 0,
+        ring2: 0,
+        weapon: 0,
+        acc1: 0,
+        acc2: 0,
+        elementBoost: "Off",
+        elementAttack: "숲철공",
+        curse: "없음",
+        manaReduction: 0,
+        abre: 0,
+        ambush: "Off",
+        focus: "Off",
+        trap: "Off",
+        nar: "Off",
+        hotTime: "Off",
+        extraElement: 0,
+        horde: "Off",
+      },
+      conv: { oneTickPlusMedi: 0 },
     },
   };
 
@@ -578,7 +578,7 @@
     c.horde = applyManual(inputState, "horde", s.horde === "On" ? 0.15 : 0);
     c.elementAttack = applyManual(inputState, "elementAttack", meteorElementValue(s.elementAttack, c));
 
-    const med = meditationTable[Number(s.meditation)] || meditationTable[9];
+    const med = meditationTable[Number(s.meditation)] || { time: 3, recovery: 0 };
     c.oneTick = applyManual(inputState, "oneTick", Math.floor((Number(s.baseMagic) || 0) * (med.recovery / 100) * (1 + c.earring)));
     c.meditation = applyManual(inputState, "meditation", c.oneTick * (med.time - 3));
     c.oneTickPlusMedi = applyManual(inputState, "oneTickPlusMedi", defaults.meteor.conv.oneTickPlusMedi);
