@@ -5,6 +5,7 @@
   const zeroToTenUpgrade = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "업글"];
   const jobTypes = ["순수", "도전", "직전/법전"];
   const madTypes = ["일반", "업글"];
+  const hordeOptions = ["Off", "호드목", "나겔목"];
   const curses = ["없음", "데프", "프라보", "어각", "아나테마"];
   const crasherElements = ["숲철공", "수토공", "생암", "생공"];
   const meteorElements = ["숲철공", "수토공", "생암", "생공", "암암"];
@@ -108,7 +109,7 @@
     { key: "acc1", label: "악세1", type: "number", factors: ["damage"] },
     { key: "acc2", label: "악세2", type: "number", factors: ["damage"] },
     { key: "extraElement", label: "이펙트", type: "number", factors: ["buff"] },
-    { key: "horde", label: "호드목", type: "select", options: onOff, factors: ["buff"] },
+    { key: "horde", label: "호드/나겔목", type: "select", options: hordeOptions, factors: ["buff"] },
     { section: "AC가중치" },
     { key: "curse", label: "저주", type: "select", options: curses, factors: ["ac"] },
     { key: "arc", label: "아크", type: "select", options: zeroToThree, factors: ["ac"] },
@@ -139,7 +140,7 @@
     { key: "acc1", label: "악세1", type: "number", factors: ["damage"] },
     { key: "acc2", label: "악세2", type: "number", factors: ["damage"] },
     { key: "extraElement", label: "이펙트", type: "number", factors: ["buff"] },
-    { key: "horde", label: "호드목", type: "select", options: onOff, factors: ["buff"] },
+    { key: "horde", label: "호드/나겔목", type: "select", options: hordeOptions, factors: ["buff"] },
     { section: "AC가중치" },
     { key: "curse", label: "저주", type: "select", options: curses, factors: ["ac"] },
     { key: "abre", label: "아브", type: "select", options: zeroToThree, factors: ["ac"] },
@@ -305,6 +306,9 @@
     if (skill === "crasher" && skillState.specs.jobType === "전직") {
       skillState.specs.jobType = "도전";
     }
+    if (skillState.specs.horde === "On") {
+      skillState.specs.horde = "호드목";
+    }
     if (
       skill === "crasher" &&
       Object.prototype.hasOwnProperty.call(skillState.convManual, "flatPhysical") &&
@@ -383,6 +387,12 @@
 
   function onValue(value) {
     return value === "On" ? 1 : 0;
+  }
+
+  function hordeValue(value) {
+    if (value === "나겔목") return 0.3;
+    if (value === "호드목" || value === "On") return 0.15;
+    return 0;
   }
 
   function jobTypeValue(value) {
@@ -486,7 +496,7 @@
       s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
     );
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
-    c.horde = applyManual(inputState, "horde", s.horde === "On" ? 0.15 : 0);
+    c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
 
     const monsterRows = [...crasherMonsterRows, ...normalizeCustomMonsters(inputState.customMonsters)];
@@ -583,7 +593,7 @@
       s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" ? 0.2 : 0,
     );
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
-    c.horde = applyManual(inputState, "horde", s.horde === "On" ? 0.15 : 0);
+    c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", meteorElementValue(s.elementAttack, c));
 
     const med = meditationTable[Number(s.meditation)] || { time: 3, recovery: 0 };
@@ -652,7 +662,7 @@
         ? ["반지1", "반지2", "저주", "아크", "아브", "기습"]
         : ["반지1", "반지2", "저주", "아브", "기습"];
     const buffFactors =
-      skill === "crasher" ? ["속강", "속공", "움", "집중", "트랩", "나르", "이펙트", "호드목"] : ["속강", "속공", "집중", "트랩", "나르", "이펙트", "호드목"];
+      skill === "crasher" ? ["속강", "속공", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"] : ["속강", "속공", "집중", "트랩", "나르", "이펙트", "호드/나겔목"];
     return [
       {
         key: "ac",
