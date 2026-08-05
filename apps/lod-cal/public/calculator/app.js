@@ -7,10 +7,13 @@
   const madTypes = ["일반", "업글"];
   const hordeOptions = ["Off", "호드목", "나겔목"];
   const curses = ["없음", "데프", "프라보", "어각", "아나테마"];
-  const crasherElements = ["숲철공", "수토공", "생암", "생공"];
-  const meteorElements = ["숲철공", "수토공", "생암", "생공", "암암"];
+  const crasherElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암"];
+  const meteorElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암"];
+  const reverseElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암"];
+  const elementNameMap = { 수토공: "속공", 생공: "생(암)공", 속암: "암방" };
   const hotTimes = ["Off", "평일", "주말"];
   const reverseDebuffs = ["호르/자보", "콜라마", "매프"];
+  const reverseBuffs = ["속강", "집중", "나르", "트랩"];
   const meteorCastMana = 12960;
 
   const curseValueCrasher = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
@@ -118,7 +121,7 @@
     { key: "ambush", label: "기습", type: "select", options: onOff, factors: ["ac"] },
     { section: "버프가중치" },
     { key: "elementBoost", label: "속강", type: "select", options: onOff, factors: ["buff"] },
-    { key: "elementAttack", label: "속공", type: "select", options: crasherElements, factors: ["buff"] },
+    { key: "elementAttack", label: "속성(공방)", type: "select", options: crasherElements, factors: ["buff"] },
     { key: "move", label: "움(렙)", type: "select", options: zeroToSix, factors: ["buff"] },
     { key: "focus", label: "집중", type: "select", options: onOff, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
@@ -148,7 +151,7 @@
     { key: "ambush", label: "기습", type: "select", options: onOff, factors: ["ac"] },
     { section: "버프가중치" },
     { key: "elementBoost", label: "속강", type: "select", options: onOff, factors: ["buff"] },
-    { key: "elementAttack", label: "속공", type: "select", options: meteorElements, factors: ["buff"] },
+    { key: "elementAttack", label: "속성(공방)", type: "select", options: meteorElements, factors: ["buff"] },
     { key: "focus", label: "집중", type: "select", options: onOff, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
@@ -233,6 +236,7 @@
       convManual: {},
       customMonsters: [],
       sectionOrder: defaultSectionOrder(skill),
+      collapsedSections: [],
       reverse: defaultReverseState(skill),
     };
   }
@@ -242,6 +246,7 @@
       dummyDamage: "",
       attackElement: defaults[skill].specs.elementAttack,
       targetAc: skill === "crasher" ? -153 : -8,
+      buffs: [],
       debuffs: [],
     };
   }
@@ -249,6 +254,10 @@
   function defaultSectionOrder(skill) {
     const rows = skill === "crasher" ? crasherMonsterRows : meteorMonsterRows;
     return [...new Set(rows.map((row) => row.section))];
+  }
+
+  function normalizeElementName(name) {
+    return elementNameMap[name] || name;
   }
 
   function loadSavedState() {
@@ -296,6 +305,7 @@
       state[skill].convManual = { ...state[skill].convManual, ...(saved[skill].convManual || {}) };
       state[skill].customMonsters = Array.isArray(saved[skill].customMonsters) ? saved[skill].customMonsters : [];
       state[skill].sectionOrder = Array.isArray(saved[skill].sectionOrder) ? saved[skill].sectionOrder : state[skill].sectionOrder;
+      state[skill].collapsedSections = Array.isArray(saved[skill].collapsedSections) ? saved[skill].collapsedSections : [];
       state[skill].reverse = { ...state[skill].reverse, ...(saved[skill].reverse || {}) };
       migrateSavedSkillState(skill);
     }
@@ -309,6 +319,10 @@
     }
     if (skillState.specs.horde === "On") {
       skillState.specs.horde = "호드목";
+    }
+    skillState.specs.elementAttack = normalizeElementName(skillState.specs.elementAttack);
+    if (skillState.reverse?.attackElement) {
+      skillState.reverse.attackElement = normalizeElementName(skillState.reverse.attackElement);
     }
     if (
       skill === "crasher" &&
@@ -333,9 +347,13 @@
     if (!Array.isArray(skillState.reverse?.debuffs)) {
       skillState.reverse = { ...defaultReverseState(skill), ...(skillState.reverse || {}), debuffs: [] };
     }
+    if (!Array.isArray(skillState.reverse?.buffs)) {
+      skillState.reverse.buffs = [];
+    }
+    skillState.reverse.buffs = skillState.reverse.buffs.filter((buff) => reverseBuffs.includes(buff));
     skillState.reverse.debuffs = skillState.reverse.debuffs.filter((debuff) => reverseDebuffs.includes(debuff));
     delete skillState.reverse.belt;
-    const options = elementOptionsForSkill(skill);
+    const options = reverseElementOptionsForSkill();
     if (!options.includes(skillState.reverse.attackElement)) {
       skillState.reverse.attackElement = defaults[skill].specs.elementAttack;
     }
@@ -445,6 +463,7 @@
       if (!ordered.includes(section)) ordered.push(section);
     }
     skillState.sectionOrder = ordered;
+    skillState.collapsedSections = (skillState.collapsedSections || []).filter((section) => sections.includes(section));
     return ordered;
   }
 
@@ -563,11 +582,13 @@
   function crasherElementValue(name, c) {
     const table = {
       숲철공: { factor: 1.35, bonus: c.extraElement },
-      수토공: { factor: 1.3, bonus: c.extraElement + c.horde },
+      속공: { factor: 1.3, bonus: c.extraElement + c.horde },
       생암: { factor: 1.2, bonus: c.extraElement },
-      생공: { factor: 1.1, bonus: c.extraElement },
+      "생(암)공": { factor: 1.1, bonus: c.extraElement },
+      암방: { factor: 0.9, bonus: c.extraElement },
+      암암: { factor: 0.75, bonus: c.extraElement },
     };
-    const selected = table[name] || table.수토공;
+    const selected = table[normalizeElementName(name)] || table.속공;
     return selected.factor ** (2 + c.elementBoost) * (1 + selected.bonus);
   }
 
@@ -624,12 +645,14 @@
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const castManaCost = c.castMana * c.manaReduction;
+      const baseMagic = Number(s.baseMagic) || 0;
+      const cappedMana = (mana) => Math.min(Number(mana) || 0, baseMagic);
       const meteorDamage = (mana) =>
-        (mana - castManaCost) * 1.5 * percent * hotTimeWeight;
+        (cappedMana(mana) - castManaCost) * 1.5 * percent * hotTimeWeight;
       const oneTickOneMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi);
       const twoTickOneMediDamage = meteorDamage(resolvedSpecs.oneTick * 2 + c.meditation);
       const twoTickTwoMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi * 2);
-      const fullManaDamage = meteorDamage(Number(s.baseMagic) || 0);
+      const fullManaDamage = meteorDamage(baseMagic);
       return {
         ...monster,
         acChanged,
@@ -663,7 +686,7 @@
         ? ["반지1", "반지2", "저주", "아크", "아브", "기습"]
         : ["반지1", "반지2", "저주", "아브", "기습"];
     const buffFactors =
-      skill === "crasher" ? ["속강", "속공", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"] : ["속강", "속공", "집중", "트랩", "나르", "이펙트", "호드/나겔목"];
+      skill === "crasher" ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"] : ["속강", "속성(공방)", "집중", "트랩", "나르", "이펙트", "호드/나겔목"];
     return [
       {
         key: "ac",
@@ -706,8 +729,8 @@
   }
 
   function meteorElementValue(name, c) {
-    const factors = { 숲철공: 1.35, 수토공: 1.3, 생암: 1.2, 생공: 1.1, 암암: 0.75 };
-    const factor = factors[name] || factors.암암;
+    const factors = { 숲철공: 1.35, 속공: 1.3, 생암: 1.2, "생(암)공": 1.1, 암방: 0.9, 암암: 0.75 };
+    const factor = factors[normalizeElementName(name)] || factors.암암;
     return roundDown(factor ** (2 + c.elementBoost) * (1 + c.extraElement), 4);
   }
 
@@ -727,6 +750,10 @@
     return skill === "crasher" ? crasherElements : meteorElements;
   }
 
+  function reverseElementOptionsForSkill() {
+    return reverseElements;
+  }
+
   function elementValueForSkill(skill, name, conversions) {
     return skill === "crasher" ? crasherElementValue(name, conversions) : meteorElementValue(name, conversions);
   }
@@ -735,23 +762,29 @@
     const skillState = getCurrentSkillState();
     if (!skillState.reverse) skillState.reverse = defaultReverseState(state.skill);
     const reverse = skillState.reverse;
-    const options = elementOptionsForSkill(state.skill);
+    const options = reverseElementOptionsForSkill();
     if (!options.includes(reverse.attackElement)) {
       reverse.attackElement = skillState.specs.elementAttack;
     }
 
     const dummyDamage = Number(reverse.dummyDamage) || 0;
     const targetAc = Number(reverse.targetAc) || 0;
-    const selectedElementValue = elementValueForSkill(state.skill, reverse.attackElement, result.conversions);
+    const selectedReverseBuffs = new Set(Array.isArray(reverse.buffs) ? reverse.buffs : []);
+    const reverseConversions = {
+      ...result.conversions,
+      elementBoost: selectedReverseBuffs.has("속강") ? 1 : 0,
+    };
+    const selectedElementValue = elementValueForSkill(state.skill, reverse.attackElement, reverseConversions);
     const elementBuffWeight = selectedElementValue >= 1 ? selectedElementValue : 0;
     const elementDebuffValue = selectedElementValue <= 1 && selectedElementValue > 0 ? selectedElementValue : 0;
     const damageIncrease = result.rows[0]?.damageIncrease ?? 1;
     const currentBuffWeight = result.rows[0]?.buffWeight ?? 1;
     const baseBuffWeight = elementBuffWeight || 1;
     const selectedBuffWeight =
-      state.skill === "crasher"
-        ? baseBuffWeight + result.conversions.move + result.conversions.focus + result.conversions.trap + result.conversions.nar
-        : baseBuffWeight + result.conversions.focus + result.conversions.trap + result.conversions.nar;
+      baseBuffWeight +
+      (selectedReverseBuffs.has("집중") ? 1 : 0) +
+      (selectedReverseBuffs.has("나르") ? 1 : 0) +
+      (selectedReverseBuffs.has("트랩") ? 1 : 0);
     const dummyAcWeight = 2;
     const originalDivider = dummyAcWeight * damageIncrease * currentBuffWeight;
     const debuffTotal = reverseDebuffTotal(reverse.debuffs, targetAc, elementDebuffValue);
@@ -908,6 +941,19 @@
   function appendSectionOrder(skillState, section) {
     if (!skillState.sectionOrder) skillState.sectionOrder = [];
     if (!skillState.sectionOrder.includes(section)) skillState.sectionOrder.push(section);
+  }
+
+  function toggleSectionCollapse(section) {
+    const skillState = getCurrentSkillState();
+    const collapsed = new Set(skillState.collapsedSections || []);
+    if (collapsed.has(section)) {
+      collapsed.delete(section);
+    } else {
+      collapsed.add(section);
+    }
+    skillState.collapsedSections = Array.from(collapsed);
+    saveState();
+    render();
   }
 
   function renderInputs(specs, result) {
@@ -1082,7 +1128,19 @@
     return value === 1 ? "-" : formatNumber(value, 2);
   }
 
+  function escapeAttribute(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[char]);
+  }
+
   function renderGroupedTables(rows, config) {
+    const skillState = getCurrentSkillState();
+    const collapsedSections = new Set(skillState.collapsedSections || []);
     const grouped = rows.reduce((acc, row) => {
       if (!acc.has(row.section)) acc.set(row.section, []);
       acc.get(row.section).push(row);
@@ -1090,18 +1148,27 @@
     }, new Map());
     return Array.from(grouped.entries())
       .map(
-        ([section, sectionRows]) => `<section class="monster-group">
+        ([section, sectionRows]) => {
+          const collapsed = collapsedSections.has(section);
+          const sectionKey = encodeURIComponent(section);
+          const safeSection = escapeAttribute(section);
+          return `<section class="monster-group${collapsed ? " is-collapsed" : ""}">
           <div class="monster-group-title">
-            <span class="section-tag">${section}</span>
+            <span class="section-tag">${safeSection}</span>
             <strong>${sectionRows.length}개 대상</strong>
             ${renderSectionInfoButton(section)}
+            <button class="section-toggle-button" type="button" data-section-toggle="${sectionKey}" aria-expanded="${String(!collapsed)}">
+              <span class="toggle-icon" aria-hidden="true">${collapsed ? "▸" : "▾"}</span>
+              <span>${collapsed ? "펼치기" : "접기"}</span>
+            </button>
           </div>
-          <table class="result-table ${config.tableClass}">
+          <table class="result-table ${config.tableClass}"${collapsed ? " hidden" : ""}>
             ${config.colWidths ? `<colgroup>${config.colWidths.map((width) => `<col style="width: ${width}%">`).join("")}</colgroup>` : ""}
             <thead>${config.headerHtml || `<tr>${config.headers.map((header) => `<th>${header}</th>`).join("")}</tr>`}</thead>
             <tbody>${sectionRows.map(config.rowRenderer).join("")}</tbody>
           </table>
-        </section>`,
+        </section>`;
+        },
       )
       .join("") + `<div class="monster-add-row">
         <button class="monster-add-button" type="button" id="openMonsterDialog">몬스터 추가</button>
@@ -1133,7 +1200,8 @@
     const skillState = getCurrentSkillState();
     const reverse = skillState.reverse || defaultReverseState(state.skill);
     const calculation = calculateReverseDamage(result);
-    const elementOptions = elementOptionsForSkill(state.skill);
+    const elementOptions = reverseElementOptionsForSkill();
+    const selectedBuffs = new Set(reverse.buffs || []);
     const selectedDebuffs = new Set(reverse.debuffs || []);
     document.getElementById("reversePanel").innerHTML = `
       <div class="reverse-heading">
@@ -1180,7 +1248,7 @@
           <input class="field-control" data-reverse-key="dummyDamage" type="number" step="any" value="${formatInputValue(reverse.dummyDamage)}" />
         </label>
         <label class="reverse-field">
-          <span>공격 속성</span>
+          <span>속성(공방)</span>
           <select class="field-control" data-reverse-key="attackElement">
             ${elementOptions
               .map((option) => `<option value="${option}" ${String(reverse.attackElement) === String(option) ? "selected" : ""}>${option}</option>`)
@@ -1191,6 +1259,17 @@
           <span>대상 AC</span>
           <input class="field-control" data-reverse-key="targetAc" type="number" step="any" value="${formatInputValue(reverse.targetAc)}" />
         </label>
+        <fieldset class="reverse-buffs">
+          <legend>버프</legend>
+          ${reverseBuffs
+            .map(
+              (buff) => `<label class="reverse-check">
+                <input type="checkbox" data-reverse-buff="${buff}" ${selectedBuffs.has(buff) ? "checked" : ""} />
+                <span>${buff}</span>
+              </label>`,
+            )
+            .join("")}
+        </fieldset>
         <fieldset class="reverse-debuffs">
           <legend>디버프</legend>
           ${reverseDebuffs
@@ -1338,6 +1417,11 @@
     });
 
     document.querySelector(".result-table-wrap").addEventListener("click", (event) => {
+      const sectionToggle = event.target.closest("[data-section-toggle]");
+      if (sectionToggle) {
+        toggleSectionCollapse(decodeURIComponent(sectionToggle.dataset.sectionToggle || ""));
+        return;
+      }
       if (event.target.closest("#openMonsterDialog")) {
         document.getElementById("monsterDialog").showModal();
         document.getElementById("monsterSection").focus();
@@ -1389,6 +1473,11 @@
     });
 
     document.getElementById("reversePanel").addEventListener("change", (event) => {
+      const buff = event.target.closest("[data-reverse-buff]");
+      if (buff) {
+        toggleReverseBuff(buff);
+        return;
+      }
       const debuff = event.target.closest("[data-reverse-debuff]");
       if (debuff) {
         toggleReverseDebuff(debuff);
@@ -1446,6 +1535,7 @@
   function ensureReverseState() {
     const skillState = getCurrentSkillState();
     if (!skillState.reverse) skillState.reverse = defaultReverseState(state.skill);
+    if (!Array.isArray(skillState.reverse.buffs)) skillState.reverse.buffs = [];
     if (!Array.isArray(skillState.reverse.debuffs)) skillState.reverse.debuffs = [];
     return skillState.reverse;
   }
@@ -1458,6 +1548,16 @@
 
   function commitReverseField(input) {
     saveReverseFieldOnly(input);
+    render();
+  }
+
+  function toggleReverseBuff(input) {
+    const reverse = ensureReverseState();
+    const selected = new Set(reverse.buffs || []);
+    if (input.checked) selected.add(input.dataset.reverseBuff);
+    else selected.delete(input.dataset.reverseBuff);
+    reverse.buffs = reverseBuffs.filter((buff) => selected.has(buff));
+    saveState();
     render();
   }
 

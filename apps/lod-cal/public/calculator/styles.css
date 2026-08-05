@@ -798,6 +798,10 @@ td.factor-hot {
   border-bottom: 1px solid var(--line);
 }
 
+.result-table[hidden] {
+  display: none !important;
+}
+
 .crasher-result th:nth-child(1),
 .crasher-result td:nth-child(1) {
   width: 7.2%;
@@ -881,6 +885,39 @@ td.factor-hot {
   min-height: 42px;
   padding: 9px 10px;
   background: #ffffff;
+}
+
+.section-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  margin-left: auto;
+  min-width: 58px;
+  height: 26px;
+  padding: 0 8px;
+  border: 1px solid #c8d9d3;
+  border-radius: 6px;
+  color: var(--ink);
+  background: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.section-toggle-button:hover,
+.section-toggle-button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  outline: none;
+}
+
+.toggle-icon {
+  width: 0.75rem;
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  line-height: 1;
 }
 
 .monster-group-title strong {
@@ -979,7 +1016,7 @@ td.factor-hot {
 
 .reverse-grid {
   display: grid;
-  grid-template-columns: minmax(130px, 1fr) minmax(120px, 0.9fr) minmax(100px, 0.75fr) max-content;
+  grid-template-columns: minmax(130px, 1fr) minmax(120px, 0.9fr) minmax(100px, 0.75fr) max-content max-content;
   gap: 10px;
   align-items: end;
 }
@@ -993,6 +1030,7 @@ td.factor-hot {
   font-weight: 800;
 }
 
+.reverse-buffs,
 .reverse-debuffs {
   display: flex;
   flex-wrap: nowrap;
@@ -1005,6 +1043,7 @@ td.factor-hot {
   border-radius: 8px;
 }
 
+.reverse-buffs legend,
 .reverse-debuffs legend {
   padding: 0 4px;
   color: var(--muted);
