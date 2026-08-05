@@ -305,6 +305,14 @@
     if (skill === "crasher" && skillState.specs.jobType === "전직") {
       skillState.specs.jobType = "도전";
     }
+    if (
+      skill === "crasher" &&
+      Object.prototype.hasOwnProperty.call(skillState.convManual, "flatPhysical") &&
+      !Object.prototype.hasOwnProperty.call(skillState.convManual, "basePhysical")
+    ) {
+      skillState.convManual.basePhysical = skillState.convManual.flatPhysical;
+    }
+    delete skillState.convManual.flatPhysical;
     if (skillState.specs.curse === "데프" && Number(skillState.convManual.curse) === 60) {
       delete skillState.convManual.curse;
     }
@@ -814,6 +822,7 @@
   }
 
   function conversionSuffix(key) {
+    if (state.skill === "crasher" && key === "basePhysical") return "추뎀";
     if (state.skill === "meteor" && (key === "baseMagic" || key === "meditation")) return "1틱";
     return "";
   }
