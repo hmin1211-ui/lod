@@ -622,13 +622,12 @@
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const manaBase = c.oneTickPlusMedi;
-      const meteorDamage = (mana, ability = c.ability) =>
-        (mana - manaBase * c.manaReduction) * 1.5 * ability * percent * hotTimeWeight;
+      const meteorDamage = (mana) =>
+        (mana - manaBase * c.manaReduction) * 1.5 * percent * hotTimeWeight;
       const oneTickOneMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi);
       const twoTickOneMediDamage = meteorDamage(resolvedSpecs.oneTick * 2 + c.meditation);
       const twoTickTwoMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi * 2);
-      const fullManaAbility = monster.kind === "dummy" ? 1 : c.ability;
-      const fullManaDamage = meteorDamage(Number(s.baseMagic) || 0, fullManaAbility);
+      const fullManaDamage = meteorDamage(Number(s.baseMagic) || 0);
       return {
         ...monster,
         acChanged,
