@@ -233,6 +233,7 @@
       convManual: {},
       customMonsters: [],
       sectionOrder: defaultSectionOrder(skill),
+      collapsedSections: [],
       reverse: defaultReverseState(skill),
     };
   }
@@ -296,6 +297,7 @@
       state[skill].convManual = { ...state[skill].convManual, ...(saved[skill].convManual || {}) };
       state[skill].customMonsters = Array.isArray(saved[skill].customMonsters) ? saved[skill].customMonsters : [];
       state[skill].sectionOrder = Array.isArray(saved[skill].sectionOrder) ? saved[skill].sectionOrder : state[skill].sectionOrder;
+      state[skill].collapsedSections = Array.isArray(saved[skill].collapsedSections) ? saved[skill].collapsedSections : [];
       state[skill].reverse = { ...state[skill].reverse, ...(saved[skill].reverse || {}) };
       migrateSavedSkillState(skill);
     }
@@ -445,6 +447,7 @@
       if (!ordered.includes(section)) ordered.push(section);
     }
     skillState.sectionOrder = ordered;
+    skillState.collapsedSections = (skillState.collapsedSections || []).filter((section) => sections.includes(section));
     return ordered;
   }
 
@@ -624,12 +627,14 @@
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const castManaCost = c.castMana * c.manaReduction;
+      const baseMagic = Number(s.baseMagic) || 0;
+      const cappedMana = (mana) => Math.min(Number(mana) || 0, baseMagic);
       const meteorDamage = (mana) =>
-        (mana - castManaCost) * 1.5 * percent * hotTimeWeight;
+        (cappedMana(mana) - castManaCost) * 1.5 * percent * hotTimeWeight;
       const oneTickOneMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi);
       const twoTickOneMediDamage = meteorDamage(resolvedSpecs.oneTick * 2 + c.meditation);
       const twoTickTwoMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi * 2);
-      const fullManaDamage = meteorDamage(Number(s.baseMagic) || 0);
+      const fullManaDamage = meteorDamage(baseMagic);
       return {
         ...monster,
         acChanged,
@@ -910,6 +915,19 @@
     if (!skillState.sectionOrder.includes(section)) skillState.sectionOrder.push(section);
   }
 
+  function toggleSectionCollapse(section) {
+    const skillState = getCurrentSkillState();
+    const collapsed = new Set(skillState.collapsedSections || []);
+    if (collapsed.has(section)) {
+      collapsed.delete(section);
+    } else {
+      collapsed.add(section);
+    }
+    skillState.collapsedSections = Array.from(collapsed);
+    saveState();
+    render();
+  }
+
   function renderInputs(specs, result) {
     const rows = [];
     for (const def of getCurrentDefs()) {
@@ -1082,7 +1100,19 @@
     return value === 1 ? "-" : formatNumber(value, 2);
   }
 
+  function escapeAttribute(value) {
+    return String(value).replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;",
+    })[char]);
+  }
+
   function renderGroupedTables(rows, config) {
+    const skillState = getCurrentSkillState();
+    const collapsedSections = new Set(skillState.collapsedSections || []);
     const grouped = rows.reduce((acc, row) => {
       if (!acc.has(row.section)) acc.set(row.section, []);
       acc.get(row.section).push(row);
@@ -1090,18 +1120,27 @@
     }, new Map());
     return Array.from(grouped.entries())
       .map(
-        ([section, sectionRows]) => `<section class="monster-group">
+        ([section, sectionRows]) => {
+          const collapsed = collapsedSections.has(section);
+          const sectionKey = encodeURIComponent(section);
+          const safeSection = escapeAttribute(section);
+          return `<section class="monster-group${collapsed ? " is-collapsed" : ""}">
           <div class="monster-group-title">
-            <span class="section-tag">${section}</span>
+            <span class="section-tag">${safeSection}</span>
             <strong>${sectionRows.length}개 대상</strong>
             ${renderSectionInfoButton(section)}
+            <button class="section-toggle-button" type="button" data-section-toggle="${sectionKey}" aria-expanded="${String(!collapsed)}">
+              <span class="toggle-icon" aria-hidden="true">${collapsed ? "▸" : "▾"}</span>
+              <span>${collapsed ? "펼치기" : "접기"}</span>
+            </button>
           </div>
-          <table class="result-table ${config.tableClass}">
+          <table class="result-table ${config.tableClass}"${collapsed ? " hidden" : ""}>
             ${config.colWidths ? `<colgroup>${config.colWidths.map((width) => `<col style="width: ${width}%">`).join("")}</colgroup>` : ""}
             <thead>${config.headerHtml || `<tr>${config.headers.map((header) => `<th>${header}</th>`).join("")}</tr>`}</thead>
             <tbody>${sectionRows.map(config.rowRenderer).join("")}</tbody>
           </table>
-        </section>`,
+        </section>`;
+        },
       )
       .join("") + `<div class="monster-add-row">
         <button class="monster-add-button" type="button" id="openMonsterDialog">몬스터 추가</button>
@@ -1338,6 +1377,11 @@
     });
 
     document.querySelector(".result-table-wrap").addEventListener("click", (event) => {
+      const sectionToggle = event.target.closest("[data-section-toggle]");
+      if (sectionToggle) {
+        toggleSectionCollapse(decodeURIComponent(sectionToggle.dataset.sectionToggle || ""));
+        return;
+      }
       if (event.target.closest("#openMonsterDialog")) {
         document.getElementById("monsterDialog").showModal();
         document.getElementById("monsterSection").focus();
