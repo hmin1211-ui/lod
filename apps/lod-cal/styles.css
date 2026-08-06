@@ -1006,6 +1006,10 @@ td.factor-hot {
   outline: 2px solid rgba(22, 122, 107, 0.16);
 }
 
+.mobile-dash-stack-label {
+  display: none;
+}
+
 .damage-warn {
   color: var(--rose);
   font-weight: 800;
@@ -1238,6 +1242,21 @@ td.factor-hot {
 
   .result-table td:first-child::before {
     color: var(--accent-strong);
+  }
+
+  .result-table td.dash-stack-cell::before {
+    content: none;
+  }
+
+  .mobile-dash-stack-label {
+    display: inline-flex;
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  .dash-stack-damage {
+    grid-column: 2;
+    min-width: 0;
   }
 
   .reverse-grid {

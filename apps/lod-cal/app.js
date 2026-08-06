@@ -1145,9 +1145,11 @@
                 : `<span class="damage-note">발록 샷</span>`
               : "";
           const deleteButton = row.custom ? `<button class="delete-monster" type="button" data-monster-id="${row.id}">삭제</button>` : "";
+          const mobileDashControl = isPure ? `<span class="mobile-dash-stack-label">${renderDashStackHeader()}</span>` : "";
+          const jobSkillCellClass = isPure ? "damage-strong dash-stack-cell" : "damage-strong";
           const jobSkillCell = hideJobSkill
             ? ""
-            : `<td data-label="${jobSkillLabel}" class="damage-strong">${formatNumber(row.jobSkillDamage)}</td>`;
+            : `<td data-label="${jobSkillLabel}" class="${jobSkillCellClass}">${mobileDashControl}<span class="dash-stack-damage">${formatNumber(row.jobSkillDamage)}</span></td>`;
           return `<tr>
             <td data-label="몬스터">${row.name}${deleteButton}</td>
             <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
