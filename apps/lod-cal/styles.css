@@ -85,7 +85,7 @@ h1 {
 .creator-note {
   display: inline-block;
   margin-left: 8px;
-  color: var(--muted);
+  color: #d7ddda;
   font-size: 0.46em;
   font-weight: 600;
   vertical-align: middle;
