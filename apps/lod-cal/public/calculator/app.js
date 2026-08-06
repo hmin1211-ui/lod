@@ -1120,8 +1120,8 @@
       container.innerHTML = renderGroupedTables(result.rows, {
         tableClass: "crasher-result",
         colWidths: hideJobSkill
-          ? [7.8, 6.3, 6.4, 6.4, 7.1, 7.1, 4.8, 6.2, 7.7, 7.7, 7.7, 7.7, 7.7, 9.4]
-          : [7.0, 5.8, 6.0, 6.0, 6.6, 6.6, 4.3, 5.7, 7.2, 7.2, 7.2, 7.2, 7.2, 7.2, 8.8],
+          ? [7.2, 5.8, 6.0, 6.4, 6.8, 7.0, 4.8, 6.2, 8.0, 8.0, 8.0, 8.0, 8.2, 9.6]
+          : [6.6, 5.4, 5.6, 6.0, 6.4, 6.6, 4.4, 5.8, 7.4, 7.4, 7.4, 7.4, 7.2, 7.6, 8.8],
         headers,
         rowRenderer: (row) => {
           const note =
@@ -1160,7 +1160,7 @@
 
     container.innerHTML = renderGroupedTables(result.rows, {
       tableClass: "meteor-result",
-      colWidths: [8.9, 6.3, 6.3, 6.8, 7.3, 7.3, 4.7, 6.2, 11.55, 11.55, 11.55, 11.55],
+      colWidths: [8.8, 5.8, 6.0, 6.5, 6.8, 7.0, 4.8, 6.2, 12.0, 12.0, 12.0, 12.1],
       headerHtml: `<tr>
         <th rowspan="2">몬스터</th>
         <th rowspan="2">기존 AC</th>

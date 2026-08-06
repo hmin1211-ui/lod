@@ -804,8 +804,11 @@ td.factor-hot {
   text-overflow: clip;
   white-space: nowrap;
   text-align: right;
-  font-size: 0.78rem;
+  font-size: 0.76rem;
   font-variant-numeric: tabular-nums;
+  line-height: 1.16;
+  word-break: keep-all;
+  padding: 6px 5px;
 }
 
 .result-table th {
@@ -823,6 +826,30 @@ td.factor-hot {
   font-weight: 800;
 }
 
+.result-table td[data-label="기존 AC"],
+.result-table td[data-label="AC변화"],
+.result-table td[data-label="AC가중치"],
+.result-table td[data-label="데미지증가"],
+.result-table td[data-label="버프가중치"],
+.result-table td[data-label="핫타임"],
+.result-table td[data-label="퍼센트"],
+.result-table td[data-label="비고"] {
+  text-align: center;
+}
+
+.result-table td[data-label="매드"],
+.result-table td[data-label="데빌"],
+.result-table td[data-label="크래셔"],
+.result-table td[data-label="퓨리"],
+.result-table td[data-label="내려/사방"],
+.result-table td[data-label="대쉬"],
+.result-table td[data-label="암살"],
+.result-table td[data-label="합계"],
+.meteor-result td.damage-strong,
+.meteor-result td.damage-main {
+  text-align: right;
+}
+
 .monster-group {
   min-width: 0;
   border-bottom: 1px solid var(--line);
@@ -832,51 +859,11 @@ td.factor-hot {
   display: none !important;
 }
 
-.crasher-result th:nth-child(1),
-.crasher-result td:nth-child(1) {
-  width: 7.2%;
-}
-
-.crasher-result th:nth-child(2),
-.crasher-result td:nth-child(2),
-.crasher-result th:nth-child(3),
-.crasher-result td:nth-child(3),
-.crasher-result th:nth-child(4),
-.crasher-result td:nth-child(4),
-.crasher-result th:nth-child(8),
-.crasher-result td:nth-child(8) {
-  width: 6.1%;
-}
-
-.crasher-result th:nth-child(5),
-.crasher-result td:nth-child(5),
-.crasher-result th:nth-child(6),
-.crasher-result td:nth-child(6),
-.crasher-result th:nth-child(7),
-.crasher-result td:nth-child(7) {
-  width: 6.8%;
-}
-
-.crasher-result th:nth-child(9),
-.crasher-result td:nth-child(9),
-.crasher-result th:nth-child(10),
-.crasher-result td:nth-child(10),
-.crasher-result th:nth-child(11),
-.crasher-result td:nth-child(11),
-.crasher-result th:nth-child(12),
-.crasher-result td:nth-child(12) {
-  width: 7.9%;
-}
-
-.crasher-result th:nth-child(13),
-.crasher-result td:nth-child(13) {
-  width: 9.2%;
-  overflow: visible;
-  font-size: 0.74rem;
-}
-
 .result-table td[data-label="비고"] {
   overflow: visible;
+  padding-right: 5px;
+  padding-left: 5px;
+  font-size: 0.73rem;
 }
 
 .merged-meteor-head {
