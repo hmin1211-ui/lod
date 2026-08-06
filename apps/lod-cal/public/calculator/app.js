@@ -442,8 +442,9 @@
     return value === "순수" ? 4 : 2;
   }
 
-  function madCoefficient(type, ability) {
-    return type === "업글" ? 0.545 * ability : 0.5;
+  function madCoefficient(type, ability, jobType) {
+    if (type !== "업글") return 0.5;
+    return jobType === "순수" ? 0.605 : 0.545 * ability;
   }
 
   function levelCoefficient(level, multiplier, upgradeValue) {
@@ -538,7 +539,7 @@
     c.acc2 = applyManual(inputState, "acc2", equipLevel(s.acc2, 0.01));
     c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
     c.move = applyManual(inputState, "move", (Number(s.move) || 0) * 0.4);
-    c.madType = madCoefficient(s.madType, c.ability);
+    c.madType = madCoefficient(s.madType, c.ability, s.jobType);
     c.furyLevel = levelCoefficient(s.furyLevel, 4.984914075823167, 84.53388511);
     c.dashLevel = levelCoefficient(s.dashLevel, 3.724984600805496, 37.25);
     c.downFourWayLevel = downFourWayRatio(inputState.downFourWay);
