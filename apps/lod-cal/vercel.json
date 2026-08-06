@@ -11,10 +11,6 @@
     {
       "source": "/calculator/(.*)",
       "destination": "/calculator/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
     }
   ]
 }
