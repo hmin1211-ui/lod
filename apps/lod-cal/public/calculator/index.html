@@ -135,6 +135,31 @@
       </form>
     </dialog>
 
+    <dialog class="monster-dialog" id="downFourWayDialog">
+      <form class="monster-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Skill Ratio</p>
+            <h2>내려/사방 비율</h2>
+          </div>
+          <button class="icon-button" id="closeDownFourWayDialog" type="button" aria-label="닫기" title="닫기">×</button>
+        </div>
+        <label>
+          <span>허수아비 대상 퓨리 데미지</span>
+          <input class="monster-input" id="downFourWayFuryDamage" data-down-fourway-key="furyDamage" type="number" step="any" />
+        </label>
+        <label>
+          <span>사방 데미지</span>
+          <input class="monster-input" id="downFourWayFourWayDamage" data-down-fourway-key="fourWayDamage" type="number" step="any" />
+        </label>
+        <label>
+          <span>내려 데미지</span>
+          <input class="monster-input" id="downFourWayDownDamage" data-down-fourway-key="downDamage" type="number" step="any" />
+        </label>
+        <div class="ratio-summary" id="downFourWaySummary"></div>
+      </form>
+    </dialog>
+
     <script src="./app.js"></script>
   </body>
 </html>

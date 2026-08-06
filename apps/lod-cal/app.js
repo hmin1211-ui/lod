@@ -110,6 +110,7 @@
     { key: "ring1", label: "반지1", type: "number", factors: ["ac"] },
     { key: "ring2", label: "반지2", type: "number", factors: ["ac"] },
     { key: "weapon", label: "무기", type: "number", factors: ["damage"] },
+    { key: "weaponMinDamage", label: "무기 최소데미지", type: "number" },
     { key: "acc1", label: "악세1", type: "number", factors: ["damage"] },
     { key: "acc2", label: "악세2", type: "number", factors: ["damage"] },
     { key: "extraElement", label: "이펙트", type: "number", factors: ["buff"] },
@@ -174,6 +175,7 @@
         ring1: 0,
         ring2: 0,
         weapon: 0,
+        weaponMinDamage: 0,
         acc1: 0,
         acc2: 0,
         elementBoost: "Off",
@@ -238,6 +240,16 @@
       sectionOrder: defaultSectionOrder(skill),
       collapsedSections: [],
       reverse: defaultReverseState(skill),
+      downFourWay: defaultDownFourWayState(),
+      dashStacks: 1,
+    };
+  }
+
+  function defaultDownFourWayState() {
+    return {
+      furyDamage: "",
+      fourWayDamage: "",
+      downDamage: "",
     };
   }
 
@@ -307,6 +319,8 @@
       state[skill].sectionOrder = Array.isArray(saved[skill].sectionOrder) ? saved[skill].sectionOrder : state[skill].sectionOrder;
       state[skill].collapsedSections = Array.isArray(saved[skill].collapsedSections) ? saved[skill].collapsedSections : [];
       state[skill].reverse = { ...state[skill].reverse, ...(saved[skill].reverse || {}) };
+      state[skill].downFourWay = { ...state[skill].downFourWay, ...(saved[skill].downFourWay || {}) };
+      state[skill].dashStacks = saved[skill].dashStacks;
       migrateSavedSkillState(skill);
     }
     return true;
@@ -342,6 +356,7 @@
     delete skillState.convManual.madType;
     delete skillState.convManual.furyLevel;
     delete skillState.convManual.dashLevel;
+    delete skillState.convManual.downFourWayLevel;
     delete skillState.convManual.oneTickPlusMedi;
     delete skillState.specManual.oneTick;
     if (!Array.isArray(skillState.reverse?.debuffs)) {
@@ -350,6 +365,10 @@
     if (!Array.isArray(skillState.reverse?.buffs)) {
       skillState.reverse.buffs = [];
     }
+    if (!skillState.downFourWay || typeof skillState.downFourWay !== "object") {
+      skillState.downFourWay = defaultDownFourWayState();
+    }
+    skillState.dashStacks = clampInt(skillState.dashStacks, 1, 6, 1);
     skillState.reverse.buffs = skillState.reverse.buffs.filter((buff) => reverseBuffs.includes(buff));
     skillState.reverse.debuffs = skillState.reverse.debuffs.filter((debuff) => reverseDebuffs.includes(debuff));
     delete skillState.reverse.belt;
@@ -395,6 +414,12 @@
     return Math.floor(Number(value) || 0);
   }
 
+  function clampInt(value, min, max, fallback) {
+    const number = Math.trunc(Number(value));
+    if (!Number.isFinite(number)) return fallback;
+    return Math.min(max, Math.max(min, number));
+  }
+
   function roundDown(value, digits) {
     const factor = 10 ** digits;
     return Math.trunc(value * factor) / factor;
@@ -425,6 +450,14 @@
 
   function levelCoefficient(level, multiplier, upgradeValue) {
     return level === "업글" ? upgradeValue : multiplier * (Number(level) || 0);
+  }
+
+  function downFourWayRatio(values = {}) {
+    const furyDamage = Number(values.furyDamage) || 0;
+    if (!furyDamage) return 0;
+    const fourWayRatio = (Number(values.fourWayDamage) || 0) / furyDamage;
+    const downRatio = (Number(values.downDamage) || 0) / furyDamage;
+    return fourWayRatio + downRatio;
   }
 
   function applyManual(skillState, key, computed) {
@@ -504,6 +537,8 @@
     c.madType = madCoefficient(s.madType, c.ability);
     c.furyLevel = levelCoefficient(s.furyLevel, 4.984914075823167, 84.53388511);
     c.dashLevel = levelCoefficient(s.dashLevel, 3.724984600805496, 37.25);
+    c.downFourWayLevel = downFourWayRatio(inputState.downFourWay);
+    c.dashStacks = clampInt(inputState.dashStacks, 1, 6, 1);
     c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
     c.arc = applyManual(inputState, "arc", (Number(s.arc) || 0) * 13);
     c.abre = applyManual(inputState, "abre", (Number(s.abre) || 0) * 18);
@@ -547,12 +582,13 @@
         hotTimeWeight;
       const fury = furyBase * c.furyLevel + flatBonus;
       const jobSkillName = isPureJob ? "대쉬" : "암살";
+      const downFourWayDamage = fury * c.downFourWayLevel;
       const jobSkillDamage = usesJobSkill
         ? isPureJob
-          ? furyBase * c.dashLevel + flatBonus
-          : base * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus
+          ? (furyBase * c.dashLevel + flatBonus) * c.dashStacks
+          : base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus
         : 0;
-      const totalDamage = mad + crasher + fury + (usesJobSkill ? jobSkillDamage : 0);
+      const totalDamage = mad + crasher + fury + downFourWayDamage + (usesJobSkill ? jobSkillDamage : 0);
       const total = monster.kind === "boss" ? Math.trunc(totalDamage) : null;
       const balrogShot = monster.kind === "boss" ? 36000000 - total : null;
       return {
@@ -566,6 +602,7 @@
         mad,
         crasher,
         fury,
+        downFourWayDamage,
         jobSkillName,
         jobSkillDamage,
         usesJobSkill,
@@ -855,6 +892,7 @@
     if (key === "madType") return map.madType;
     if (key === "furyLevel") return map.furyLevel;
     if (key === "dashLevel") return map.dashLevel;
+    if (key === "downFourWayLevel") return map.downFourWayLevel;
     if (key === "basePhysical") return map.flatPhysical;
     if (key === "baseMagic") return state.skill === "meteor" ? result.specs.oneTick : "";
     if (key === "meditation" && state.skill === "meteor") return map.oneTick;
@@ -864,11 +902,12 @@
 
   function isReadonlyConversionKey(key) {
     if (state.skill === "meteor" && key === "baseMagic") return true;
-    return ["jobType", "madType", "furyLevel", "dashLevel"].includes(key);
+    return ["jobType", "madType", "furyLevel", "dashLevel", "downFourWayLevel"].includes(key);
   }
 
   function formatConversionInputValue(key, value) {
     if (key === "dashLevel" && typeof value === "number") return value.toFixed(2);
+    if (key === "downFourWayLevel" && typeof value === "number") return value.toFixed(4);
     return formatInputValue(value);
   }
 
@@ -1002,6 +1041,10 @@
   }
 
   function renderSpecControl(def, specs) {
+    if (state.skill === "crasher" && def.key === "downFourWayLevel") {
+      return `<button class="field-control calibrate-button" type="button" data-open-down-fourway>비율 입력</button>`;
+    }
+
     if (def.type === "select") {
       return `<select class="field-control" data-kind="spec" data-key="${def.key}">${def.options
         .map((option) => `<option value="${option}" ${String(specs[def.key]) === String(option) ? "selected" : ""}>${option}</option>`)
@@ -1035,6 +1078,34 @@
     </tr>`;
   }
 
+  function renderDownFourWayDialog() {
+    const values = state.crasher.downFourWay || defaultDownFourWayState();
+    const fields = {
+      furyDamage: document.getElementById("downFourWayFuryDamage"),
+      fourWayDamage: document.getElementById("downFourWayFourWayDamage"),
+      downDamage: document.getElementById("downFourWayDownDamage"),
+    };
+    for (const [key, input] of Object.entries(fields)) {
+      if (input) input.value = formatInputValue(values[key]);
+    }
+    renderDownFourWaySummary();
+  }
+
+  function renderDownFourWaySummary() {
+    const values = state.crasher.downFourWay || defaultDownFourWayState();
+    const furyDamage = Number(values.furyDamage) || 0;
+    const fourWayRatio = furyDamage ? (Number(values.fourWayDamage) || 0) / furyDamage : 0;
+    const downRatio = furyDamage ? (Number(values.downDamage) || 0) / furyDamage : 0;
+    const totalRatio = fourWayRatio + downRatio;
+    const summary = document.getElementById("downFourWaySummary");
+    if (!summary) return;
+    summary.innerHTML = `
+      <span>사방 ${formatNumber(fourWayRatio, 4)}</span>
+      <span>내려 ${formatNumber(downRatio, 4)}</span>
+      <strong>합산 ${formatNumber(totalRatio, 4)}</strong>
+    `;
+  }
+
   function renderResults(result) {
     const container = document.querySelector(".result-table-wrap");
     if (state.skill === "crasher") {
@@ -1043,14 +1114,15 @@
       const hideJobSkill = jobType === "직전/법전";
       const crasherLabel = isPure ? "데빌" : "크래셔";
       const jobSkillLabel = isPure ? "대쉬" : "암살";
-      const headers = ["몬스터", "기존 AC", "AC변화", "AC가중치", "데미지증가", "버프가중치", "핫타임", "퍼센트", "매드", crasherLabel, "퓨리"];
-      if (!hideJobSkill) headers.push(jobSkillLabel);
+      const jobSkillHeader = isPure ? renderDashStackHeader() : jobSkillLabel;
+      const headers = ["몬스터", "기존 AC", "AC변화", "AC가중치", "데미지증가", "버프가중치", "핫타임", "퍼센트", "매드", crasherLabel, "퓨리", "내려/사방"];
+      if (!hideJobSkill) headers.push(jobSkillHeader);
       headers.push("합계", "비고");
       container.innerHTML = renderGroupedTables(result.rows, {
         tableClass: "crasher-result",
         colWidths: hideJobSkill
-          ? [8.2, 6.7, 6.9, 6.9, 7.6, 7.6, 5.1, 6.6, 8.4, 8.4, 8.4, 8.4, 11.0]
-          : [7.5, 6.2, 6.4, 6.4, 7.1, 7.1, 4.6, 6.1, 7.9, 7.9, 7.9, 7.9, 7.9, 9.1],
+          ? [7.8, 6.3, 6.4, 6.4, 7.1, 7.1, 4.8, 6.2, 7.7, 7.7, 7.7, 7.7, 7.7, 9.4]
+          : [7.0, 5.8, 6.0, 6.0, 6.6, 6.6, 4.3, 5.7, 7.2, 7.2, 7.2, 7.2, 7.2, 7.2, 8.8],
         headers,
         rowRenderer: (row) => {
           const note =
@@ -1077,6 +1149,7 @@
             <td data-label="매드" class="damage-strong">${formatNumber(row.mad)}</td>
             <td data-label="${crasherLabel}" class="damage-strong">${formatNumber(row.crasher)}</td>
             <td data-label="퓨리" class="damage-strong">${formatNumber(row.fury)}</td>
+            <td data-label="내려/사방" class="damage-strong">${formatNumber(row.downFourWayDamage)}</td>
             ${jobSkillCell}
             <td data-label="합계" class="damage-total">${formatNumber(row.totalDamage)}</td>
             <td data-label="비고">${note}</td>
@@ -1133,6 +1206,17 @@
 
   function formatHotTimeWeight(value) {
     return value === 1 ? "-" : formatNumber(value, 2);
+  }
+
+  function renderDashStackHeader() {
+    const current = clampInt(state.crasher.dashStacks, 1, 6, 1);
+    const options = [1, 2, 3, 4, 5, 6]
+      .map((value) => `<option value="${value}" ${value === current ? "selected" : ""}>${value}중</option>`)
+      .join("");
+    return `<span class="dash-stack-head">
+      <span>대쉬</span>
+      <select class="dash-stack-select" data-dash-stack aria-label="대쉬 중첩수">${options}</select>
+    </span>`;
   }
 
   function escapeAttribute(value) {
@@ -1417,6 +1501,10 @@
       document.getElementById("baekyuInfoDialog").close();
     });
 
+    document.getElementById("closeDownFourWayDialog").addEventListener("click", () => {
+      document.getElementById("downFourWayDialog").close();
+    });
+
     document.getElementById("sectionOrderList").addEventListener("click", (event) => {
       const button = event.target.closest("[data-section-move]");
       if (!button) return;
@@ -1452,10 +1540,25 @@
       render();
     });
 
+    document.querySelector(".result-table-wrap").addEventListener("change", (event) => {
+      const select = event.target.closest("[data-dash-stack]");
+      if (!select) return;
+      state.crasher.dashStacks = clampInt(select.value, 1, 6, 1);
+      saveState();
+      render();
+    });
+
     document.getElementById("inputRows").addEventListener("change", (event) => {
       const input = event.target.closest("[data-kind]");
       if (!input) return;
       commitField(input);
+    });
+
+    document.getElementById("inputRows").addEventListener("click", (event) => {
+      if (!event.target.closest("[data-open-down-fourway]")) return;
+      renderDownFourWayDialog();
+      document.getElementById("downFourWayDialog").showModal();
+      document.getElementById("downFourWayFuryDamage").focus();
     });
 
     document.getElementById("inputRows").addEventListener("input", (event) => {
@@ -1501,6 +1604,22 @@
       if (!input) return;
       event.preventDefault();
       commitReverseField(input);
+      input.blur();
+    });
+
+    document.getElementById("downFourWayDialog").addEventListener("input", (event) => {
+      const input = event.target.closest("[data-down-fourway-key]");
+      if (!input) return;
+      saveDownFourWayFieldOnly(input);
+      renderDownFourWaySummary();
+      render();
+    });
+
+    document.getElementById("downFourWayDialog").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      const input = event.target.closest("[data-down-fourway-key]");
+      if (!input) return;
+      event.preventDefault();
       input.blur();
     });
   }
@@ -1556,6 +1675,12 @@
   function commitReverseField(input) {
     saveReverseFieldOnly(input);
     render();
+  }
+
+  function saveDownFourWayFieldOnly(input) {
+    if (!state.crasher.downFourWay) state.crasher.downFourWay = defaultDownFourWayState();
+    state.crasher.downFourWay[input.dataset.downFourwayKey] = parseReverseInputValue(input);
+    saveState();
   }
 
   function toggleReverseBuff(input) {

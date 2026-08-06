@@ -273,6 +273,18 @@ td {
   outline: 2px solid rgba(22, 122, 107, 0.16);
 }
 
+.calibrate-button {
+  color: var(--accent-strong);
+  background: #f5faf8;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.calibrate-button:hover,
+.calibrate-button:focus-visible {
+  border-color: var(--accent);
+}
+
 .field-control.converted {
   background: #fbfcf8;
 }
@@ -408,6 +420,24 @@ td {
 
 .monster-info-dialog {
   width: min(560px, calc(100vw - 28px));
+}
+
+.ratio-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f5faf8;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.ratio-summary strong {
+  color: var(--accent-strong);
 }
 
 .dialog-heading {
@@ -949,6 +979,34 @@ td.factor-hot {
 .damage-total {
   color: var(--accent-strong);
   font-weight: 900;
+}
+
+.dash-stack-head {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
+.dash-stack-select {
+  width: 44px;
+  height: 21px;
+  padding: 0 4px;
+  border: 1px solid #c8d9d3;
+  border-radius: 999px;
+  color: var(--accent-strong);
+  background: #f5faf8;
+  font-size: 0.68rem;
+  font-weight: 900;
+  text-align: center;
+  cursor: pointer;
+}
+
+.dash-stack-select:focus {
+  border-color: var(--accent);
+  outline: 2px solid rgba(22, 122, 107, 0.16);
 }
 
 .damage-warn {
