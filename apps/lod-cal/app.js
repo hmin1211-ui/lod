@@ -881,7 +881,12 @@
 
   function formatNumber(value, digits = 0) {
     if (value === null || value === undefined || Number.isNaN(Number(value))) return "-";
-    return new Intl.NumberFormat("ko-KR", { maximumFractionDigits: digits }).format(value);
+    const factor = 10 ** digits;
+    const truncated = Math.trunc(Number(value) * factor) / factor;
+    return new Intl.NumberFormat("ko-KR", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: digits,
+    }).format(truncated);
   }
 
   function formatInputValue(value) {
