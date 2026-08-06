@@ -568,8 +568,9 @@
       const useHot = monster.kind !== "boss";
       const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
+      const bossCrasherRate = monster.kind === "boss" && s.jobType !== "도전" ? 0.75 : 1;
       const mad = base * c.madType * percent * hotTimeWeight + flatBonus;
-      const crasher = base * c.jobType * percent * hotTimeWeight + flatBonus;
+      const crasher = (base * c.jobType * percent * hotTimeWeight + flatBonus) * bossCrasherRate;
       const furyBase =
         acWeight *
         damageIncrease *
