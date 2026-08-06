@@ -570,7 +570,8 @@
       const percentWithoutFocus = acWeight * damageIncrease * (buffWeight - c.focus);
       const base = Number(s.basePhysical) || 0;
       const flat = c.flatPhysical;
-      const appliesFlatBonus = normalizeElementName(s.elementAttack) === "생(암)공" && monster.kind !== "boss";
+      const flatBonusElements = new Set(["생암", "생(암)공"]);
+      const appliesFlatBonus = flatBonusElements.has(normalizeElementName(s.elementAttack)) && monster.kind !== "boss";
       const useHot = monster.kind !== "boss";
       const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
