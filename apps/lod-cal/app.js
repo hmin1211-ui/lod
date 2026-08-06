@@ -450,6 +450,12 @@
     return level === "업글" ? upgradeValue : multiplier * (Number(level) || 0);
   }
 
+  function buffWeightWithElement(elementValue, additiveBuffs) {
+    return elementValue > 0 && elementValue < 1
+      ? elementValue * (1 + additiveBuffs)
+      : elementValue + additiveBuffs;
+  }
+
   function downFourWayRatio(values = {}) {
     const furyDamage = Number(values.furyDamage) || 0;
     if (!furyDamage) return 0;
@@ -558,7 +564,7 @@
       const acChanged =
         monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const buffWeight = c.elementAttack + c.move + c.focus + c.trap + c.nar;
+      const buffWeight = buffWeightWithElement(c.elementAttack, c.move + c.focus + c.trap + c.nar);
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const percentWithoutFocus = acWeight * damageIncrease * (buffWeight - c.focus);
@@ -676,7 +682,7 @@
         c.abre +
         c.ambush;
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const buffWeight = c.elementAttack + c.focus + c.trap + c.nar;
+      const buffWeight = buffWeightWithElement(c.elementAttack, c.focus + c.trap + c.nar);
       const hotTimeWeight = 1 + c.hotTime;
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
