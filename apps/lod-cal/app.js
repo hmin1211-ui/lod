@@ -353,6 +353,8 @@
     }
     delete skillState.convManual.oneTickPlusMedi;
     delete skillState.specManual.oneTick;
+    delete skillState.specManual.oneTickPlusMedi;
+    delete skillState.specs.oneTickPlusMedi;
     if (!Array.isArray(skillState.reverse?.debuffs)) {
       skillState.reverse = { ...defaultReverseState(skill), ...(skillState.reverse || {}), debuffs: [] };
     }
@@ -672,9 +674,7 @@
 
     const resolvedSpecs = { ...s };
     resolvedSpecs.oneTick = Math.floor(((Number(s.baseMagic) || 0) / 5) * (1 + c.earring));
-    if (!inputState.specManual.oneTickPlusMedi) {
-      resolvedSpecs.oneTickPlusMedi = resolvedSpecs.oneTick + c.meditation;
-    }
+    resolvedSpecs.oneTickPlusMedi = resolvedSpecs.oneTick + c.meditation;
 
     const monsterRows = [...meteorMonsterRows, ...normalizeCustomMonsters(inputState.customMonsters)];
     const rows = monsterRows.map((monster) => {
@@ -1046,7 +1046,7 @@
       rows.push(renderInputRow(def, specs, result));
       if (state.skill === "meteor" && def.key === "meditation") {
         rows.push(renderMeteorHelperRow("메디 회복량", "conv", "meditation", result.conversions.meditation));
-        rows.push(renderMeteorHelperRow("1틱 + 메디", "spec", "oneTickPlusMedi", result.specs.oneTickPlusMedi));
+        rows.push(renderMeteorHelperRow("1틱 + 메디", "spec", "oneTickPlusMedi", result.specs.oneTickPlusMedi, { transient: true }));
       }
     }
     document.getElementById("inputRows").innerHTML = rows.join("");
@@ -1101,13 +1101,15 @@
     return suffixes[key] || "";
   }
 
-  function renderMeteorHelperRow(label, kind, key, value) {
+  function renderMeteorHelperRow(label, kind, key, value, options = {}) {
+    const binding = options.transient || options.readonly ? "" : ` data-kind="${kind}" data-key="${key}"`;
+    const readonly = options.readonly ? " readonly aria-readonly=\"true\"" : "";
     return `<tr class="helper-row">
       <td colspan="3">
         <label class="inline-helper">
           <span class="helper-label">${label}</span>
           <span class="helper-colon">:</span>
-          <input class="field-control helper-input" data-kind="${kind}" data-key="${key}" type="number" step="any" value="${kind === "conv" ? formatConversionInputValue(key, value) : formatInputValue(value)}" />
+          <input class="field-control helper-input" type="number" step="any"${binding} value="${kind === "conv" ? formatConversionInputValue(key, value) : formatInputValue(value)}"${readonly} />
         </label>
       </td>
     </tr>`;
