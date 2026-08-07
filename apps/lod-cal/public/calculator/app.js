@@ -353,8 +353,6 @@
     }
     delete skillState.convManual.oneTickPlusMedi;
     delete skillState.specManual.oneTick;
-    delete skillState.specManual.oneTickPlusMedi;
-    delete skillState.specs.oneTickPlusMedi;
     if (!Array.isArray(skillState.reverse?.debuffs)) {
       skillState.reverse = { ...defaultReverseState(skill), ...(skillState.reverse || {}), debuffs: [] };
     }
@@ -674,7 +672,9 @@
 
     const resolvedSpecs = { ...s };
     resolvedSpecs.oneTick = Math.floor(((Number(s.baseMagic) || 0) / 5) * (1 + c.earring));
-    resolvedSpecs.oneTickPlusMedi = resolvedSpecs.oneTick + c.meditation;
+    if (!inputState.specManual.oneTickPlusMedi) {
+      resolvedSpecs.oneTickPlusMedi = resolvedSpecs.oneTick + c.meditation;
+    }
 
     const monsterRows = [...meteorMonsterRows, ...normalizeCustomMonsters(inputState.customMonsters)];
     const rows = monsterRows.map((monster) => {
@@ -790,6 +790,13 @@
 
   function getCurrentResult() {
     return state.skill === "crasher" ? calculateCrasher(state.crasher) : calculateMeteor(state.meteor);
+  }
+
+  function clearMeteorDerivedManuals(key) {
+    if (state.skill !== "meteor") return;
+    if (!["baseMagic", "meditation", "earring"].includes(key)) return;
+    delete state.meteor.specManual.oneTickPlusMedi;
+    delete state.meteor.specs.oneTickPlusMedi;
   }
 
   function getCurrentDefs() {
@@ -1046,7 +1053,7 @@
       rows.push(renderInputRow(def, specs, result));
       if (state.skill === "meteor" && def.key === "meditation") {
         rows.push(renderMeteorHelperRow("메디 회복량", "conv", "meditation", result.conversions.meditation));
-        rows.push(renderMeteorHelperRow("1틱 + 메디", "spec", "oneTickPlusMedi", result.specs.oneTickPlusMedi, { transient: true }));
+        rows.push(renderMeteorHelperRow("1틱 + 메디", "spec", "oneTickPlusMedi", result.specs.oneTickPlusMedi));
       }
     }
     document.getElementById("inputRows").innerHTML = rows.join("");
@@ -1102,14 +1109,15 @@
   }
 
   function renderMeteorHelperRow(label, kind, key, value, options = {}) {
-    const binding = options.transient || options.readonly ? "" : ` data-kind="${kind}" data-key="${key}"`;
+    const binding = options.readonly ? "" : ` data-kind="${kind}" data-key="${key}"`;
     const readonly = options.readonly ? " readonly aria-readonly=\"true\"" : "";
+    const displayValue = kind === "conv" ? formatConversionInputValue(key, value) : formatInputValue(value);
     return `<tr class="helper-row">
       <td colspan="3">
         <label class="inline-helper">
           <span class="helper-label">${label}</span>
           <span class="helper-colon">:</span>
-          <input class="field-control helper-input" type="number" step="any"${binding} value="${kind === "conv" ? formatConversionInputValue(key, value) : formatInputValue(value)}"${readonly} />
+          <input class="field-control helper-input" type="number" step="any"${binding} value="${displayValue}"${readonly} />
         </label>
       </td>
     </tr>`;
@@ -1666,6 +1674,7 @@
   function commitField(input) {
       const skillState = getCurrentSkillState();
       const key = input.dataset.key;
+      clearMeteorDerivedManuals(key);
       if (input.dataset.kind === "spec") {
         skillState.specs[key] = parseInputValue(input);
         skillState.specManual[key] = true;
@@ -1680,6 +1689,7 @@
   function saveFieldOnly(input) {
       const skillState = getCurrentSkillState();
       const key = input.dataset.key;
+      clearMeteorDerivedManuals(key);
       if (input.dataset.kind === "spec") {
         skillState.specs[key] = parseInputValue(input);
         skillState.specManual[key] = true;
