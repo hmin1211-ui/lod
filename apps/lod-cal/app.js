@@ -896,8 +896,10 @@
 
     const acDrop = (selected.has("콜라마") ? 10 : 0) + (selected.has("매프") ? 20 : 0);
     if (acDrop) {
-      const denominator = 100 + targetAc;
-      values.push(denominator === 0 ? 1 : (100 + targetAc - acDrop) / denominator);
+      const beforeWeight = defenseRate(targetAc);
+      const afterWeight = defenseRate(targetAc - acDrop);
+      const value = beforeWeight > 0 && afterWeight > 0 ? afterWeight / beforeWeight : 1;
+      values.push(value);
     }
     return values;
   }
