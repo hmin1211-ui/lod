@@ -442,13 +442,17 @@
     return value === "순수" ? 4 : 2;
   }
 
-  function madCoefficient(type, ability, jobType) {
+  function madCoefficient(type, jobType) {
     if (type !== "업글") return 0.5;
-    return jobType === "순수" ? 0.605 : 0.545 * ability;
+    return jobType === "순수" ? 0.605 : 0.545;
   }
 
   function levelCoefficient(level, multiplier, upgradeValue) {
     return level === "업글" ? upgradeValue : multiplier * (Number(level) || 0);
+  }
+
+  function dashCoefficient(level) {
+    return level === "업글" ? 37.25 : 3.724984600805496 * (Number(level) || 0);
   }
 
   function buffWeightWithElement(elementValue, additiveBuffs) {
@@ -539,9 +543,9 @@
     c.acc2 = applyManual(inputState, "acc2", equipLevel(s.acc2, 0.01));
     c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
     c.move = applyManual(inputState, "move", (Number(s.move) || 0) * 0.4);
-    c.madType = madCoefficient(s.madType, c.ability, s.jobType);
+    c.madType = madCoefficient(s.madType, s.jobType);
     c.furyLevel = levelCoefficient(s.furyLevel, 4.984914075823167, 84.53388511);
-    c.dashLevel = levelCoefficient(s.dashLevel, 3.724984600805496, 37.25);
+    c.dashLevel = dashCoefficient(s.dashLevel);
     c.downFourWayLevel = downFourWayRatio(inputState.downFourWay);
     c.dashStacks = clampInt(inputState.dashStacks, 1, 6, 1);
     c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
@@ -577,7 +581,8 @@
       const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
       const bossCrasherRate = monster.kind === "boss" && s.jobType !== "도전" ? 0.75 : 1;
-      const mad = base * c.madType * percent * hotTimeWeight + flatBonus;
+      const madAbilityWeight = s.madType === "업글" ? c.ability : 1;
+      const mad = base * c.madType * madAbilityWeight * percent * hotTimeWeight + flatBonus;
       const crasher = (base * c.jobType * percent * hotTimeWeight + flatBonus) * bossCrasherRate;
       const furyBase =
         acWeight *
@@ -898,6 +903,13 @@
     return value ?? "";
   }
 
+  function formatDecimalInputValue(value, digits = 4) {
+    if (typeof value !== "number") return formatInputValue(value);
+    const factor = 10 ** digits;
+    const truncated = Math.trunc(value * factor) / factor;
+    return Number.isInteger(truncated) ? String(truncated) : String(Number(truncated.toFixed(digits)));
+  }
+
   function conversionFor(key, result) {
     const map = result.conversions;
     if (key === "jobType") return map.jobType;
@@ -918,9 +930,8 @@
   }
 
   function formatConversionInputValue(key, value) {
-    if (key === "dashLevel" && typeof value === "number") return value.toFixed(2);
-    if (key === "downFourWayLevel" && typeof value === "number") return value.toFixed(4);
-    return formatInputValue(value);
+    if (key === "dashLevel") return formatDecimalInputValue(value, 2);
+    return formatDecimalInputValue(value, 4);
   }
 
   function conversionSuffix(key) {
@@ -1040,7 +1051,8 @@
         ? `<input class="field-control converted" data-kind="conv" data-key="${def.key}" type="text" value="-" disabled />`
         : isReadonlyConversionKey(def.key)
           ? `<input class="field-control converted${suffix ? " has-suffix" : ""}" type="number" value="${formatConversionInputValue(def.key, converted)}" disabled />`
-          : `<input class="field-control converted${suffix ? " has-suffix" : ""}" data-kind="${binding.kind}" data-key="${binding.key}" type="number" step="any" value="${formatInputValue(
+          : `<input class="field-control converted${suffix ? " has-suffix" : ""}" data-kind="${binding.kind}" data-key="${binding.key}" type="number" step="any" value="${formatConversionInputValue(
+              def.key,
               converted,
             )}" />`;
     const convertedControl =
@@ -1084,7 +1096,7 @@
         <label class="inline-helper">
           <span class="helper-label">${label}</span>
           <span class="helper-colon">:</span>
-          <input class="field-control helper-input" data-kind="${kind}" data-key="${key}" type="number" step="any" value="${formatInputValue(value)}" />
+          <input class="field-control helper-input" data-kind="${kind}" data-key="${key}" type="number" step="any" value="${kind === "conv" ? formatConversionInputValue(key, value) : formatInputValue(value)}" />
         </label>
       </td>
     </tr>`;
