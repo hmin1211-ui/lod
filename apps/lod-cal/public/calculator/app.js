@@ -147,12 +147,12 @@
     { key: "horde", label: "호드/나겔목", type: "select", options: hordeOptions, factors: ["buff"] },
     { section: "AC가중치" },
     { key: "curse", label: "저주", type: "select", options: curses, factors: ["ac"] },
+    { key: "arc", label: "아크", type: "select", options: zeroToThree, factors: ["ac"] },
     { key: "abre", label: "아브", type: "select", options: zeroToThree, factors: ["ac"] },
     { key: "ambush", label: "기습", type: "select", options: onOff, factors: ["ac"] },
     { section: "버프가중치" },
     { key: "elementBoost", label: "속강", type: "select", options: onOff, factors: ["buff"] },
     { key: "elementAttack", label: "속성(공방)", type: "select", options: meteorElements, factors: ["buff"] },
-    { key: "focus", label: "집중", type: "select", options: onOff, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
     { section: "기타" },
@@ -209,6 +209,7 @@
         elementAttack: "숲철공",
         curse: "없음",
         manaReduction: 0,
+        arc: 0,
         abre: 0,
         ambush: "Off",
         focus: "Off",
@@ -347,14 +348,9 @@
     if (skillState.specs.curse === "데프" && Number(skillState.convManual.curse) === 60) {
       delete skillState.convManual.curse;
     }
-    delete skillState.convManual.extraElement;
-    delete skillState.convManual.str;
-    delete skillState.convManual.con;
-    delete skillState.convManual.jobType;
-    delete skillState.convManual.madType;
-    delete skillState.convManual.furyLevel;
-    delete skillState.convManual.dashLevel;
-    delete skillState.convManual.downFourWayLevel;
+    for (const key of readonlyConversionKeysForSkill(skill)) {
+      delete skillState.convManual[key];
+    }
     delete skillState.convManual.oneTickPlusMedi;
     delete skillState.specManual.oneTick;
     if (!Array.isArray(skillState.reverse?.debuffs)) {
@@ -654,9 +650,10 @@
     c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
     c.curse = applyManual(inputState, "curse", curseValueMeteor[s.curse] ?? 0);
     c.manaReduction = applyManual(inputState, "manaReduction", (100 - (Number(s.manaReduction) || 0)) / 100);
+    c.arc = applyManual(inputState, "arc", (Number(s.arc) || 0) * 13);
     c.abre = applyManual(inputState, "abre", (Number(s.abre) || 0) * 18);
     c.ambush = applyManual(inputState, "ambush", s.ambush === "On" || Number(s.ambush) === 1 ? 20 : 0);
-    c.focus = applyManual(inputState, "focus", onValue(s.focus));
+    c.focus = 0;
     c.trap = applyManual(inputState, "trap", onValue(s.trap));
     c.nar = applyManual(inputState, "nar", onValue(s.nar));
     c.hotTime = applyManual(
@@ -686,6 +683,7 @@
         c.ring1 +
         c.ring2 +
         c.curse +
+        c.arc +
         c.abre +
         c.ambush;
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
@@ -729,13 +727,13 @@
     const acChangeTotal =
       skill === "crasher"
         ? conversions.ring1 + conversions.ring2 + conversions.curse + conversions.arc + conversions.abre + conversions.ambush
-        : conversions.ring1 + conversions.ring2 + conversions.curse + conversions.abre + conversions.ambush;
+        : conversions.ring1 + conversions.ring2 + conversions.curse + conversions.arc + conversions.abre + conversions.ambush;
     const acFactors =
       skill === "crasher"
         ? ["반지1", "반지2", "저주", "아크", "아브", "기습"]
-        : ["반지1", "반지2", "저주", "아브", "기습"];
+        : ["반지1", "반지2", "저주", "아크", "아브", "기습"];
     const buffFactors =
-      skill === "crasher" ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"] : ["속강", "속성(공방)", "집중", "트랩", "나르", "이펙트", "호드/나겔목"];
+      skill === "crasher" ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"] : ["속강", "속성(공방)", "트랩", "나르", "이펙트", "호드/나겔목"];
     return [
       {
         key: "ac",
@@ -924,9 +922,22 @@
     return map[key] ?? "";
   }
 
+  function editableConversionKeysForSkill(skill) {
+    return skill === "crasher"
+      ? new Set(["madType", "furyLevel", "dashLevel", "downFourWayLevel"])
+      : new Set(["meditation"]);
+  }
+
+  function readonlyConversionKeysForSkill(skill) {
+    const defs = skill === "crasher" ? crasherDefs : meteorDefs;
+    const editable = editableConversionKeysForSkill(skill);
+    return defs
+      .filter((def) => def.key && !editable.has(def.key))
+      .map((def) => def.key);
+  }
+
   function isReadonlyConversionKey(key) {
-    if (state.skill === "meteor" && key === "baseMagic") return true;
-    return ["jobType", "madType", "furyLevel", "dashLevel", "downFourWayLevel"].includes(key);
+    return !editableConversionKeysForSkill(state.skill).has(key);
   }
 
   function formatConversionInputValue(key, value) {
