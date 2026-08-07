@@ -580,20 +580,21 @@
       const madAbilityWeight = s.madType === "업글" ? c.ability : 1;
       const mad = base * c.madType * madAbilityWeight * percent * hotTimeWeight + flatBonus;
       const crasher = (base * c.jobType * percent * hotTimeWeight + flatBonus) * bossCrasherRate;
-      const furyBase =
+      const skillBase =
         acWeight *
         damageIncrease *
         (buffWeight - c.focus) *
         (Number(s.str) || 0) *
         (Number(s.con) || 0) *
-        c.ability *
         hotTimeWeight;
-      const fury = furyBase * c.furyLevel + flatBonus;
+      const furyAbilityWeight = s.furyLevel === "업글" ? c.ability : 1;
+      const dashAbilityWeight = s.dashLevel === "업글" ? c.ability : 1;
+      const fury = skillBase * furyAbilityWeight * c.furyLevel + flatBonus;
       const jobSkillName = isPureJob ? "대쉬" : "암살";
       const downFourWayDamage = fury * c.downFourWayLevel;
       const jobSkillDamage = usesJobSkill
         ? isPureJob
-          ? (furyBase * c.dashLevel + flatBonus) * c.dashStacks
+          ? (skillBase * dashAbilityWeight * c.dashLevel + flatBonus) * c.dashStacks
           : base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus
         : 0;
       const totalDamage = mad + crasher + fury + downFourWayDamage + (usesJobSkill ? jobSkillDamage : 0);
