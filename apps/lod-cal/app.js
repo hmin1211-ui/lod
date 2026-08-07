@@ -539,10 +539,10 @@
     c.acc2 = applyManual(inputState, "acc2", equipLevel(s.acc2, 0.01));
     c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
     c.move = applyManual(inputState, "move", (Number(s.move) || 0) * 0.4);
-    c.madType = madCoefficient(s.madType, s.jobType);
-    c.furyLevel = levelCoefficient(s.furyLevel, 4.984914075823167, 84.53388511);
-    c.dashLevel = dashCoefficient(s.dashLevel);
-    c.downFourWayLevel = downFourWayRatio(inputState.downFourWay);
+    c.madType = applyManual(inputState, "madType", madCoefficient(s.madType, s.jobType));
+    c.furyLevel = applyManual(inputState, "furyLevel", levelCoefficient(s.furyLevel, 4.984914075823167, 84.53388511));
+    c.dashLevel = applyManual(inputState, "dashLevel", dashCoefficient(s.dashLevel));
+    c.downFourWayLevel = applyManual(inputState, "downFourWayLevel", downFourWayRatio(inputState.downFourWay));
     c.dashStacks = clampInt(inputState.dashStacks, 1, 6, 1);
     c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
     c.arc = applyManual(inputState, "arc", (Number(s.arc) || 0) * 13);
@@ -797,6 +797,16 @@
     if (!["baseMagic", "meditation", "earring"].includes(key)) return;
     delete state.meteor.specManual.oneTickPlusMedi;
     delete state.meteor.specs.oneTickPlusMedi;
+  }
+
+  function clearCrasherSkillConversionManuals(key) {
+    if (state.skill !== "crasher") return;
+    if (["madType", "furyLevel", "dashLevel", "downFourWayLevel"].includes(key)) {
+      delete state.crasher.convManual[key];
+    }
+    if (key === "jobType") {
+      delete state.crasher.convManual.madType;
+    }
   }
 
   function getCurrentDefs() {
@@ -1675,6 +1685,7 @@
       const skillState = getCurrentSkillState();
       const key = input.dataset.key;
       clearMeteorDerivedManuals(key);
+      clearCrasherSkillConversionManuals(key);
       if (input.dataset.kind === "spec") {
         skillState.specs[key] = parseInputValue(input);
         skillState.specManual[key] = true;
@@ -1690,6 +1701,7 @@
       const skillState = getCurrentSkillState();
       const key = input.dataset.key;
       clearMeteorDerivedManuals(key);
+      clearCrasherSkillConversionManuals(key);
       if (input.dataset.kind === "spec") {
         skillState.specs[key] = parseInputValue(input);
         skillState.specManual[key] = true;
@@ -1729,6 +1741,7 @@
   function saveDownFourWayFieldOnly(input) {
     if (!state.crasher.downFourWay) state.crasher.downFourWay = defaultDownFourWayState();
     state.crasher.downFourWay[input.dataset.downFourwayKey] = parseReverseInputValue(input);
+    delete state.crasher.convManual.downFourWayLevel;
     saveState();
   }
 
