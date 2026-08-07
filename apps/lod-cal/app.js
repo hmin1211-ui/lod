@@ -942,7 +942,7 @@
 
   function editableConversionKeysForSkill(skill) {
     return skill === "crasher"
-      ? new Set(["madType", "furyLevel", "dashLevel", "downFourWayLevel"])
+      ? new Set(["basePhysical", "madType", "furyLevel", "dashLevel", "downFourWayLevel"])
       : new Set(["meditation"]);
   }
 
