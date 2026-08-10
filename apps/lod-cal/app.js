@@ -444,7 +444,7 @@
   }
 
   function madCoefficient(type, jobType) {
-    if (type !== "업글") return 0.5;
+    if (type !== "업글") return jobType === "순수" ? 0.55 : 0.5;
     return jobType === "순수" ? 0.605 : 0.545;
   }
 
