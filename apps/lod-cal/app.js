@@ -438,6 +438,11 @@
     return value === "순수" ? 4 : 2;
   }
 
+  function bossCrasherRate(jobType) {
+    if (jobType === "순수") return 0.9;
+    return jobType === "도전" ? 1 : 0.75;
+  }
+
   function madCoefficient(type, jobType) {
     if (type !== "업글") return 0.5;
     return jobType === "순수" ? 0.605 : 0.545;
@@ -576,10 +581,10 @@
       const useHot = monster.kind !== "boss";
       const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
-      const bossCrasherRate = monster.kind === "boss" && s.jobType !== "도전" ? 0.75 : 1;
+      const bossRate = monster.kind === "boss" ? bossCrasherRate(s.jobType) : 1;
       const madAbilityWeight = s.madType === "업글" ? c.ability : 1;
       const mad = base * c.madType * madAbilityWeight * percent * hotTimeWeight + flatBonus;
-      const crasher = (base * c.jobType * percent * hotTimeWeight + flatBonus) * bossCrasherRate;
+      const crasher = (base * c.jobType * percent * hotTimeWeight + flatBonus) * bossRate;
       const skillBase =
         acWeight *
         damageIncrease *
