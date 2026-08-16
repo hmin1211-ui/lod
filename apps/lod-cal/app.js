@@ -14,6 +14,20 @@
   const hotTimes = ["Off", "평일", "주말"];
   const reverseDebuffs = ["호르/자보", "콜라마", "매프"];
   const reverseBuffs = ["속강", "집중", "나르", "트랩"];
+  const reverseDummyAcFactors = [
+    { key: "rings", label: "반지" },
+    { key: "curse", label: "저주" },
+    { key: "arc", label: "아크" },
+    { key: "abre", label: "아브" },
+    { key: "ambush", label: "기습" },
+  ];
+  const reverseDummyBuffFactors = [
+    { key: "elementBoost", label: "속강" },
+    { key: "move", label: "움" },
+    { key: "focus", label: "집중" },
+    { key: "trap", label: "트랩" },
+    { key: "nar", label: "나르" },
+  ];
   const meteorCastMana = 12960;
   const crasherNagelringShotHp = 10300000;
   const resultFontScales = [100, 85, 70];
@@ -263,8 +277,16 @@
   function defaultReverseState(skill) {
     return {
       dummyDamage: "",
-      attackElement: defaults[skill].specs.elementAttack,
+      dummyAttackElement: defaults[skill].specs.elementAttack,
+      dummyAcFactors: ["rings"],
+      dummyBuffFactors: reverseDummyBuffFactors.map((factor) => factor.key),
+      dummyHotTime: 0,
+      dummyHotTimePercentInput: true,
+      dummySpirit: 0,
+      targetAttackElement: defaults[skill].specs.elementAttack,
       targetAc: skill === "crasher" ? -153 : -8,
+      targetHotTime: 0,
+      targetSpirit: 0,
       buffs: [],
       debuffs: [],
     };
@@ -345,6 +367,12 @@
     skillState.specs.elementAttack = normalizeElementName(skillState.specs.elementAttack);
     if (skillState.reverse?.attackElement) {
       skillState.reverse.attackElement = normalizeElementName(skillState.reverse.attackElement);
+      if (!skillState.reverse.targetAttackElement) {
+        skillState.reverse.targetAttackElement = skillState.reverse.attackElement;
+      }
+      if (!skillState.reverse.dummyAttackElement) {
+        skillState.reverse.dummyAttackElement = defaults[skill].specs.elementAttack;
+      }
     }
     if (
       skill === "crasher" &&
@@ -368,6 +396,27 @@
     if (!Array.isArray(skillState.reverse?.buffs)) {
       skillState.reverse.buffs = [];
     }
+    if (!Array.isArray(skillState.reverse?.dummyAcFactors)) {
+      skillState.reverse.dummyAcFactors = ["rings"];
+    }
+    if (!Array.isArray(skillState.reverse?.dummyBuffFactors)) {
+      skillState.reverse.dummyBuffFactors = reverseDummyBuffFactors.map((factor) => factor.key);
+    }
+    skillState.reverse.dummyAcFactors = skillState.reverse.dummyAcFactors.filter((key) =>
+      reverseDummyAcFactors.some((factor) => factor.key === key),
+    );
+    skillState.reverse.dummyBuffFactors = skillState.reverse.dummyBuffFactors.filter((key) =>
+      reverseDummyBuffFactors.some((factor) => factor.key === key),
+    );
+    if (!skillState.reverse.dummyHotTimePercentInput) {
+      const oldHotTime = Number(skillState.reverse.dummyHotTime) || 0;
+      skillState.reverse.dummyHotTime = oldHotTime > 0 && oldHotTime <= 1 ? oldHotTime * 100 : oldHotTime;
+      skillState.reverse.dummyHotTimePercentInput = true;
+    }
+    skillState.reverse.dummyHotTime = Number(skillState.reverse.dummyHotTime) || 0;
+    skillState.reverse.dummySpirit = Number(skillState.reverse.dummySpirit) || 0;
+    skillState.reverse.targetHotTime = Number(skillState.reverse.targetHotTime) || 0;
+    skillState.reverse.targetSpirit = Number(skillState.reverse.targetSpirit) || 0;
     if (!skillState.downFourWay || typeof skillState.downFourWay !== "object") {
       skillState.downFourWay = defaultDownFourWayState();
     }
@@ -379,8 +428,13 @@
     skillState.reverse.debuffs = skillState.reverse.debuffs.filter((debuff) => reverseDebuffs.includes(debuff));
     delete skillState.reverse.belt;
     const options = reverseElementOptionsForSkill();
-    if (!options.includes(skillState.reverse.attackElement)) {
-      skillState.reverse.attackElement = defaults[skill].specs.elementAttack;
+    skillState.reverse.dummyAttackElement = normalizeElementName(skillState.reverse.dummyAttackElement);
+    skillState.reverse.targetAttackElement = normalizeElementName(skillState.reverse.targetAttackElement);
+    if (!options.includes(skillState.reverse.dummyAttackElement)) {
+      skillState.reverse.dummyAttackElement = defaults[skill].specs.elementAttack;
+    }
+    if (!options.includes(skillState.reverse.targetAttackElement)) {
+      skillState.reverse.targetAttackElement = defaults[skill].specs.elementAttack;
     }
   }
 
@@ -881,45 +935,77 @@
     if (!skillState.reverse) skillState.reverse = defaultReverseState(state.skill);
     const reverse = skillState.reverse;
     const options = reverseElementOptionsForSkill();
-    if (!options.includes(reverse.attackElement)) {
-      reverse.attackElement = skillState.specs.elementAttack;
+    if (!options.includes(reverse.dummyAttackElement)) {
+      reverse.dummyAttackElement = skillState.specs.elementAttack;
+    }
+    if (!options.includes(reverse.targetAttackElement)) {
+      reverse.targetAttackElement = skillState.specs.elementAttack;
     }
 
     const dummyDamage = Number(reverse.dummyDamage) || 0;
     const targetAc = Number(reverse.targetAc) || 0;
-    const selectedReverseBuffs = new Set(Array.isArray(reverse.buffs) ? reverse.buffs : []);
-    const reverseConversions = {
+    const selectedDummyAcFactors = new Set(Array.isArray(reverse.dummyAcFactors) ? reverse.dummyAcFactors : []);
+    const selectedDummyBuffFactors = new Set(Array.isArray(reverse.dummyBuffFactors) ? reverse.dummyBuffFactors : []);
+    const selectedTargetBuffs = new Set(Array.isArray(reverse.buffs) ? reverse.buffs : []);
+    const dummyConversions = {
       ...result.conversions,
-      elementBoost: selectedReverseBuffs.has("속강") ? 1 : 0,
+      elementBoost: selectedDummyBuffFactors.has("elementBoost") ? result.conversions.elementBoost || 0 : 0,
     };
-    const selectedElementValue = elementValueForSkill(state.skill, reverse.attackElement, reverseConversions);
-    const elementBuffWeight = selectedElementValue >= 1 ? selectedElementValue : 0;
-    const elementDebuffValue = selectedElementValue <= 1 && selectedElementValue > 0 ? selectedElementValue : 0;
+    const targetConversions = {
+      ...result.conversions,
+      elementBoost: selectedTargetBuffs.has("속강") ? 1 : 0,
+    };
+    const dummyElementValue = elementValueForSkill(state.skill, reverse.dummyAttackElement, dummyConversions);
+    const targetElementValue = elementValueForSkill(state.skill, reverse.targetAttackElement, targetConversions);
+    const targetElementBuffWeight = targetElementValue >= 1 ? targetElementValue : 0;
+    const targetElementDebuffValue = targetElementValue <= 1 && targetElementValue > 0 ? targetElementValue : 0;
     const damageIncrease = result.rows[0]?.damageIncrease ?? 1;
-    const currentBuffWeight = result.rows[0]?.buffWeight ?? 1;
-    const baseBuffWeight = elementBuffWeight || 1;
+    const dummyAcChanged =
+      100 +
+      (selectedDummyAcFactors.has("rings") ? (result.conversions.ring1 || 0) + (result.conversions.ring2 || 0) : 0) +
+      (selectedDummyAcFactors.has("curse") ? result.conversions.curse || 0 : 0) +
+      (selectedDummyAcFactors.has("arc") ? result.conversions.arc || 0 : 0) +
+      (selectedDummyAcFactors.has("abre") ? result.conversions.abre || 0 : 0) +
+      (selectedDummyAcFactors.has("ambush") ? result.conversions.ambush || 0 : 0);
+    const dummyAcWeight = defenseRate(dummyAcChanged);
+    const dummyBuffAdditive =
+      (selectedDummyBuffFactors.has("move") ? result.conversions.move || 0 : 0) +
+      (selectedDummyBuffFactors.has("focus") ? result.conversions.focus || 0 : 0) +
+      (selectedDummyBuffFactors.has("trap") ? result.conversions.trap || 0 : 0) +
+      (selectedDummyBuffFactors.has("nar") ? result.conversions.nar || 0 : 0);
+    const dummyBuffWeight = buffWeightWithElement(dummyElementValue, dummyBuffAdditive);
+    const dummyHotTimeWeight = 1 + (Number(reverse.dummyHotTime) || 0) / 100;
+    const dummySpiritWeight = 1 + (Number(reverse.dummySpirit) || 0) / 100;
+    const originalDivider = dummyAcWeight * damageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
+    const baseBuffWeight = targetElementBuffWeight || 1;
     const selectedBuffWeight =
       baseBuffWeight +
-      (selectedReverseBuffs.has("집중") ? 1 : 0) +
-      (selectedReverseBuffs.has("나르") ? 1 : 0) +
-      (selectedReverseBuffs.has("트랩") ? 1 : 0);
-    const dummyAcWeight = defenseRate(100 + (result.conversions.ring1 || 0) + (result.conversions.ring2 || 0));
-    const originalDivider = dummyAcWeight * damageIncrease * currentBuffWeight;
-    const debuffTotal = reverseDebuffTotal(reverse.debuffs, targetAc, elementDebuffValue);
-    const targetPercent = defenseRate(targetAc) * damageIncrease * (selectedBuffWeight / debuffTotal);
+      (selectedTargetBuffs.has("집중") ? 1 : 0) +
+      (selectedTargetBuffs.has("나르") ? 1 : 0) +
+      (selectedTargetBuffs.has("트랩") ? 1 : 0);
+    const debuffTotal = reverseDebuffTotal(reverse.debuffs, targetAc, targetElementDebuffValue);
+    const targetAcWeight = defenseRate(targetAc);
+    const targetHotTimeWeight = 1 + (Number(reverse.targetHotTime) || 0) / 100;
+    const targetSpiritWeight = 1 + (Number(reverse.targetSpirit) || 0) / 100;
+    const targetPercent = targetAcWeight * damageIncrease * (selectedBuffWeight / debuffTotal) * targetHotTimeWeight * targetSpiritWeight;
     const originalDamage = originalDivider ? dummyDamage / originalDivider : 0;
 
     return {
       damage: originalDamage * targetPercent,
       originalDamage,
-      acWeight: defenseRate(targetAc),
+      acWeight: targetAcWeight,
       damageIncrease,
+      dummyAcChanged,
       dummyAcWeight,
-      currentBuffWeight,
+      dummyBuffWeight,
+      dummyHotTimeWeight,
+      dummySpiritWeight,
       originalDivider,
       targetPercent,
       selectedBuffWeight,
-      elementDebuffValue,
+      targetHotTimeWeight,
+      targetSpiritWeight,
+      elementDebuffValue: targetElementDebuffValue,
       debuffTotal,
     };
   }
@@ -1424,6 +1510,8 @@
     const elementOptions = reverseElementOptionsForSkill();
     const selectedBuffs = new Set(reverse.buffs || []);
     const selectedDebuffs = new Set(reverse.debuffs || []);
+    const selectedDummyAcFactors = new Set(reverse.dummyAcFactors || []);
+    const selectedDummyBuffFactors = new Set(reverse.dummyBuffFactors || []);
     document.getElementById("reversePanel").innerHTML = `
       <div class="reverse-heading">
         <div>
@@ -1443,15 +1531,23 @@
       </div>
       <div class="reverse-metrics">
         <div class="reverse-metric factor-ac">
-          <span>AC가중치</span>
+          <span>허수 AC가중치</span>
+          <strong>${formatNumber(calculation.dummyAcWeight, 4)}</strong>
+        </div>
+        <div class="reverse-metric factor-buff">
+          <span>허수 버프가중치</span>
+          <strong>${formatNumber(calculation.dummyBuffWeight, 4)}</strong>
+        </div>
+        <div class="reverse-metric factor-ac">
+          <span>대상 AC가중치</span>
           <strong>${formatNumber(calculation.acWeight, 4)}</strong>
         </div>
         <div class="reverse-metric factor-damage">
-          <span>데미지증가</span>
+          <span>장비 데미지증가</span>
           <strong>${formatNumber(calculation.damageIncrease, 4)}</strong>
         </div>
         <div class="reverse-metric factor-buff">
-          <span>버프가중치</span>
+          <span>대상 버프가중치</span>
           <strong>${formatNumber(calculation.selectedBuffWeight, 4)}</strong>
         </div>
         <div class="reverse-metric factor-hot">
@@ -1463,45 +1559,104 @@
           <strong>${formatNumber(calculation.targetPercent, 4)}</strong>
         </div>
       </div>
-      <div class="reverse-grid">
-        <label class="reverse-field">
-          <span>허수아비 데미지</span>
-          <input class="field-control" data-reverse-key="dummyDamage" type="number" step="any" value="${formatInputValue(reverse.dummyDamage)}" />
-        </label>
-        <label class="reverse-field">
-          <span>속성(공방)</span>
-          <select class="field-control" data-reverse-key="attackElement">
-            ${elementOptions
-              .map((option) => `<option value="${option}" ${String(reverse.attackElement) === String(option) ? "selected" : ""}>${option}</option>`)
-              .join("")}
-          </select>
-        </label>
-        <label class="reverse-field">
-          <span>대상 AC</span>
-          <input class="field-control" data-reverse-key="targetAc" type="number" step="any" value="${formatInputValue(reverse.targetAc)}" />
-        </label>
-        <fieldset class="reverse-buffs">
-          <legend>버프</legend>
-          ${reverseBuffs
-            .map(
-              (buff) => `<label class="reverse-check">
-                <input type="checkbox" data-reverse-buff="${buff}" ${selectedBuffs.has(buff) ? "checked" : ""} />
-                <span>${buff}</span>
-              </label>`,
-            )
-            .join("")}
-        </fieldset>
-        <fieldset class="reverse-debuffs">
-          <legend>디버프</legend>
-          ${reverseDebuffs
-            .map(
-              (debuff) => `<label class="reverse-check">
-                <input type="checkbox" data-reverse-debuff="${debuff}" ${selectedDebuffs.has(debuff) ? "checked" : ""} />
-                <span>${debuff}</span>
-              </label>`,
-            )
-            .join("")}
-        </fieldset>
+      <div class="reverse-condition-layout">
+        <section class="reverse-condition-group">
+          <h3>허수아비 타격 조건</h3>
+          <p>장비는 왼쪽 입력란의 장비 값을 사용합니다.</p>
+          <div class="reverse-grid reverse-grid-dummy-inputs">
+            <label class="reverse-field">
+              <span>허수아비 데미지</span>
+              <input class="field-control" data-reverse-key="dummyDamage" type="number" step="any" value="${formatInputValue(reverse.dummyDamage)}" />
+            </label>
+            <label class="reverse-field">
+              <span>공격속성(공방)</span>
+              <select class="field-control" data-reverse-key="dummyAttackElement">
+                ${elementOptions
+                  .map((option) => `<option value="${option}" ${String(reverse.dummyAttackElement) === String(option) ? "selected" : ""}>${option}</option>`)
+                  .join("")}
+              </select>
+            </label>
+            <label class="reverse-field">
+              <span>핫타임(%)</span>
+              <input class="field-control" data-reverse-key="dummyHotTime" type="number" step="any" value="${formatInputValue(reverse.dummyHotTime)}" />
+            </label>
+            <label class="reverse-field">
+              <span>정령 %</span>
+              <input class="field-control" data-reverse-key="dummySpirit" type="number" step="any" value="${formatInputValue(reverse.dummySpirit)}" />
+            </label>
+          </div>
+          <div class="reverse-grid reverse-grid-dummy-factors">
+            <fieldset class="reverse-check-group">
+              <legend>AC가중치 적용</legend>
+              ${reverseDummyAcFactors
+                .map(
+                  (factor) => `<label class="reverse-check">
+                    <input type="checkbox" data-reverse-dummy-ac="${factor.key}" ${selectedDummyAcFactors.has(factor.key) ? "checked" : ""} />
+                    <span>${factor.label}</span>
+                  </label>`,
+                )
+                .join("")}
+            </fieldset>
+            <fieldset class="reverse-check-group">
+              <legend>버프가중치 적용</legend>
+              ${reverseDummyBuffFactors
+                .map(
+                  (factor) => `<label class="reverse-check">
+                    <input type="checkbox" data-reverse-dummy-buff="${factor.key}" ${selectedDummyBuffFactors.has(factor.key) ? "checked" : ""} />
+                    <span>${factor.label}</span>
+                  </label>`,
+                )
+                .join("")}
+            </fieldset>
+          </div>
+        </section>
+        <section class="reverse-condition-group">
+          <h3>공격 대상</h3>
+          <div class="reverse-grid reverse-grid-target">
+            <label class="reverse-field">
+              <span>속성(공방)</span>
+              <select class="field-control" data-reverse-key="targetAttackElement">
+                ${elementOptions
+                  .map((option) => `<option value="${option}" ${String(reverse.targetAttackElement) === String(option) ? "selected" : ""}>${option}</option>`)
+                  .join("")}
+              </select>
+            </label>
+            <label class="reverse-field">
+              <span>대상 AC</span>
+              <input class="field-control" data-reverse-key="targetAc" type="number" step="any" value="${formatInputValue(reverse.targetAc)}" />
+            </label>
+            <label class="reverse-field">
+              <span>핫타임(%)</span>
+              <input class="field-control" data-reverse-key="targetHotTime" type="number" step="any" value="${formatInputValue(reverse.targetHotTime)}" />
+            </label>
+            <label class="reverse-field">
+              <span>정령 %</span>
+              <input class="field-control" data-reverse-key="targetSpirit" type="number" step="any" value="${formatInputValue(reverse.targetSpirit)}" />
+            </label>
+            <fieldset class="reverse-check-group">
+              <legend>버프</legend>
+              ${reverseBuffs
+                .map(
+                  (buff) => `<label class="reverse-check">
+                    <input type="checkbox" data-reverse-buff="${buff}" ${selectedBuffs.has(buff) ? "checked" : ""} />
+                    <span>${buff}</span>
+                  </label>`,
+                )
+                .join("")}
+            </fieldset>
+            <fieldset class="reverse-check-group">
+              <legend>디버프</legend>
+              ${reverseDebuffs
+                .map(
+                  (debuff) => `<label class="reverse-check">
+                    <input type="checkbox" data-reverse-debuff="${debuff}" ${selectedDebuffs.has(debuff) ? "checked" : ""} />
+                    <span>${debuff}</span>
+                  </label>`,
+                )
+                .join("")}
+            </fieldset>
+          </div>
+        </section>
       </div>`;
   }
 
@@ -1717,6 +1872,16 @@
     });
 
     document.getElementById("reversePanel").addEventListener("change", (event) => {
+      const dummyAc = event.target.closest("[data-reverse-dummy-ac]");
+      if (dummyAc) {
+        toggleReverseDummyFactor("dummyAcFactors", dummyAc.dataset.reverseDummyAc, dummyAc.checked);
+        return;
+      }
+      const dummyBuff = event.target.closest("[data-reverse-dummy-buff]");
+      if (dummyBuff) {
+        toggleReverseDummyFactor("dummyBuffFactors", dummyBuff.dataset.reverseDummyBuff, dummyBuff.checked);
+        return;
+      }
       const buff = event.target.closest("[data-reverse-buff]");
       if (buff) {
         toggleReverseBuff(buff);
@@ -1801,6 +1966,10 @@
     if (!skillState.reverse) skillState.reverse = defaultReverseState(state.skill);
     if (!Array.isArray(skillState.reverse.buffs)) skillState.reverse.buffs = [];
     if (!Array.isArray(skillState.reverse.debuffs)) skillState.reverse.debuffs = [];
+    if (!Array.isArray(skillState.reverse.dummyAcFactors)) skillState.reverse.dummyAcFactors = ["rings"];
+    if (!Array.isArray(skillState.reverse.dummyBuffFactors)) {
+      skillState.reverse.dummyBuffFactors = reverseDummyBuffFactors.map((factor) => factor.key);
+    }
     return skillState.reverse;
   }
 
@@ -1828,6 +1997,17 @@
     if (input.checked) selected.add(input.dataset.reverseBuff);
     else selected.delete(input.dataset.reverseBuff);
     reverse.buffs = reverseBuffs.filter((buff) => selected.has(buff));
+    saveState();
+    render();
+  }
+
+  function toggleReverseDummyFactor(listKey, value, checked) {
+    const reverse = ensureReverseState();
+    const selected = new Set(reverse[listKey] || []);
+    if (checked) selected.add(value);
+    else selected.delete(value);
+    const allowed = listKey === "dummyAcFactors" ? reverseDummyAcFactors : reverseDummyBuffFactors;
+    reverse[listKey] = allowed.map((factor) => factor.key).filter((key) => selected.has(key));
     saveState();
     render();
   }
