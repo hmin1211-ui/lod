@@ -1319,13 +1319,13 @@
   function formatCrasherDamage(row, value) {
     const defaultNagelringShot = row.section === "나겔링" && value >= crasherNagelringShotHp;
     const customShot = row.custom && row.hp && value >= row.hp;
-    return `${formatNumber(value)}${defaultNagelringShot || customShot ? ' <span class="shot-mark">[샷]</span>' : ""}`;
+    return `${defaultNagelringShot || customShot ? '<span class="shot-mark">[샷]</span> ' : ""}${formatNumber(value)}`;
   }
 
   function formatMeteorDamage(row, value) {
     const defaultBaekyuShot = row.name === "백유고층" && value >= 654732;
     const customShot = row.custom && row.hp && value >= row.hp;
-    return `${formatNumber(value)}${defaultBaekyuShot || customShot ? ' <span class="shot-mark">[샷]</span>' : ""}`;
+    return `${defaultBaekyuShot || customShot ? '<span class="shot-mark">[샷]</span> ' : ""}${formatNumber(value)}`;
   }
 
   function formatHotTimeWeight(value) {
