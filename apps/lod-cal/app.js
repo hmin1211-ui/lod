@@ -557,7 +557,7 @@
     c.furyLevel = applyManual(
       inputState,
       "furyLevel",
-      levelCoefficient(s.furyLevel, 4.984914075823167, 77.3518116164091) *
+      levelCoefficient(s.furyLevel, 4.984914075823167, 77.32374) *
         (s.furyLevel === "업글" ? abilityCoefficient(s.ability, 0.00415) : 1),
     );
     c.dashLevel = applyManual(
