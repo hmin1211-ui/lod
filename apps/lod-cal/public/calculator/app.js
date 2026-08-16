@@ -15,6 +15,8 @@
   const reverseDebuffs = ["호르/자보", "콜라마", "매프"];
   const reverseBuffs = ["속강", "집중", "나르", "트랩"];
   const meteorCastMana = 12960;
+  const crasherNagelringShotHp = 10300000;
+  const resultFontScales = [100, 85, 70];
 
   const curseValueCrasher = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
   const curseValueMeteor = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
@@ -246,6 +248,7 @@
       reverse: defaultReverseState(skill),
       downFourWay: defaultDownFourWayState(),
       dashStacks: 1,
+      resultFontScale: 100,
     };
   }
 
@@ -325,6 +328,7 @@
       state[skill].reverse = { ...state[skill].reverse, ...(saved[skill].reverse || {}) };
       state[skill].downFourWay = { ...state[skill].downFourWay, ...(saved[skill].downFourWay || {}) };
       state[skill].dashStacks = saved[skill].dashStacks;
+      state[skill].resultFontScale = saved[skill].resultFontScale;
       migrateSavedSkillState(skill);
     }
     return true;
@@ -368,6 +372,9 @@
       skillState.downFourWay = defaultDownFourWayState();
     }
     skillState.dashStacks = clampInt(skillState.dashStacks, 1, 6, 1);
+    skillState.resultFontScale = resultFontScales.includes(Number(skillState.resultFontScale))
+      ? Number(skillState.resultFontScale)
+      : 100;
     skillState.reverse.buffs = skillState.reverse.buffs.filter((buff) => reverseBuffs.includes(buff));
     skillState.reverse.debuffs = skillState.reverse.debuffs.filter((debuff) => reverseDebuffs.includes(debuff));
     delete skillState.reverse.belt;
@@ -1095,6 +1102,17 @@
     render();
   }
 
+  function cycleResultFontScale() {
+    const skillState = getCurrentSkillState();
+    const current = resultFontScales.includes(Number(skillState.resultFontScale))
+      ? Number(skillState.resultFontScale)
+      : 100;
+    const next = resultFontScales[(resultFontScales.indexOf(current) + 1) % resultFontScales.length];
+    skillState.resultFontScale = next;
+    saveState();
+    render();
+  }
+
   function renderInputs(specs, result) {
     const rows = [];
     for (const def of getCurrentDefs()) {
@@ -1236,7 +1254,7 @@
           const jobSkillCellClass = isPure ? "damage-strong dash-stack-cell" : "damage-strong";
           const jobSkillCell = hideJobSkill
             ? ""
-            : `<td data-label="${jobSkillLabel}" class="${jobSkillCellClass}">${mobileDashControl}<span class="dash-stack-damage">${formatNumber(row.jobSkillDamage)}</span></td>`;
+            : `<td data-label="${jobSkillLabel}" class="${jobSkillCellClass}">${mobileDashControl}<span class="dash-stack-damage">${formatCrasherDamage(row, row.jobSkillDamage)}</span></td>`;
           return `<tr>
             <td data-label="몬스터">${row.name}${deleteButton}</td>
             <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
@@ -1246,10 +1264,10 @@
             <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 4)}</td>
             <td data-label="핫타임" class="factor-hot">${formatHotTimeWeight(row.hotTimeWeight)}</td>
             <td data-label="퍼센트">${formatNumber(row.percent, 4)}</td>
-            <td data-label="매드" class="damage-strong">${formatNumber(row.mad)}</td>
-            <td data-label="${crasherLabel}" class="damage-strong">${formatNumber(row.crasher)}</td>
-            <td data-label="퓨리" class="damage-strong">${formatNumber(row.fury)}</td>
-            <td data-label="내려/사방" class="damage-strong">${formatNumber(row.downFourWayDamage)}</td>
+            <td data-label="매드" class="damage-strong">${formatCrasherDamage(row, row.mad)}</td>
+            <td data-label="${crasherLabel}" class="damage-strong">${formatCrasherDamage(row, row.crasher)}</td>
+            <td data-label="퓨리" class="damage-strong">${formatCrasherDamage(row, row.fury)}</td>
+            <td data-label="내려/사방" class="damage-strong">${formatCrasherDamage(row, row.downFourWayDamage)}</td>
             ${jobSkillCell}
             <td data-label="합계" class="damage-total">${formatNumber(row.totalDamage)}</td>
             <td data-label="비고">${note}</td>
@@ -1298,6 +1316,12 @@
     });
   }
 
+  function formatCrasherDamage(row, value) {
+    const defaultNagelringShot = row.section === "나겔링" && value >= crasherNagelringShotHp;
+    const customShot = row.custom && row.hp && value >= row.hp;
+    return `${formatNumber(value)}${defaultNagelringShot || customShot ? ' <span class="shot-mark">[샷]</span>' : ""}`;
+  }
+
   function formatMeteorDamage(row, value) {
     const defaultBaekyuShot = row.name === "백유고층" && value >= 654732;
     const customShot = row.custom && row.hp && value >= row.hp;
@@ -1332,6 +1356,9 @@
   function renderGroupedTables(rows, config) {
     const skillState = getCurrentSkillState();
     const collapsedSections = new Set(skillState.collapsedSections || []);
+    const resultFontScale = resultFontScales.includes(Number(skillState.resultFontScale))
+      ? Number(skillState.resultFontScale)
+      : 100;
     const grouped = rows.reduce((acc, row) => {
       if (!acc.has(row.section)) acc.set(row.section, []);
       acc.get(row.section).push(row);
@@ -1348,12 +1375,15 @@
             <span class="section-tag">${safeSection}</span>
             <strong>${sectionRows.length}개 대상</strong>
             ${renderSectionInfoButton(section)}
+            <button class="section-font-button" type="button" data-result-font-scale title="결과표 글자 크기 조정">
+              글자 ${resultFontScale}%
+            </button>
             <button class="section-toggle-button" type="button" data-section-toggle="${sectionKey}" aria-expanded="${String(!collapsed)}">
               <span class="toggle-icon" aria-hidden="true">${collapsed ? "▸" : "▾"}</span>
               <span>${collapsed ? "펼치기" : "접기"}</span>
             </button>
           </div>
-          <table class="result-table ${config.tableClass}"${collapsed ? " hidden" : ""}>
+          <table class="result-table ${config.tableClass} font-scale-${resultFontScale}"${collapsed ? " hidden" : ""}>
             ${config.colWidths ? `<colgroup>${config.colWidths.map((width) => `<col style="width: ${width}%">`).join("")}</colgroup>` : ""}
             <thead>${config.headerHtml || `<tr>${config.headers.map((header) => `<th>${header}</th>`).join("")}</tr>`}</thead>
             <tbody>${sectionRows.map(config.rowRenderer).join("")}</tbody>
@@ -1630,6 +1660,10 @@
       if (event.target.closest("#openBaekyuInfoDialog")) {
         renderBaekyuInfoDialog();
         document.getElementById("baekyuInfoDialog").showModal();
+        return;
+      }
+      if (event.target.closest("[data-result-font-scale]")) {
+        cycleResultFontScale();
         return;
       }
       const button = event.target.closest(".delete-monster");
