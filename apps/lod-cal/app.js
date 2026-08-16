@@ -445,7 +445,7 @@
 
   function madCoefficient(type, jobType) {
     if (type !== "업글") return jobType === "순수" ? 0.55 : 0.5;
-    return jobType === "순수" ? 0.605 : 0.545;
+    return jobType === "순수" ? 0.55 : 0.5;
   }
 
   function levelCoefficient(level, multiplier, upgradeValue) {
@@ -453,7 +453,12 @@
   }
 
   function dashCoefficient(level) {
-    return level === "업글" ? 37.25 : 3.724984600805496 * (Number(level) || 0);
+    return level === "업글" ? 57.8012585037289 : 3.724984600805496 * (Number(level) || 0);
+  }
+
+  function abilityCoefficient(ability, rate = 0.0041) {
+    const value = Number(ability);
+    return value < 201 ? 1 : (value - 200) * rate + 1.1;
   }
 
   function buffWeightWithElement(elementValue, additiveBuffs) {
@@ -532,7 +537,7 @@
     c.ability = applyManual(
       inputState,
       "ability",
-      Number(s.ability) < 201 ? 1 : (100 + (Number(s.ability) - 201) * 0.415) / 100,
+      abilityCoefficient(s.ability),
     );
     c.flatPhysical = applyManual(inputState, "basePhysical", defaults.crasher.conv.flatPhysical);
     c.str = Number(s.str) + 5;
@@ -544,9 +549,22 @@
     c.acc2 = applyManual(inputState, "acc2", equipLevel(s.acc2, 0.01));
     c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
     c.move = applyManual(inputState, "move", (Number(s.move) || 0) * 0.4);
-    c.madType = applyManual(inputState, "madType", madCoefficient(s.madType, s.jobType));
-    c.furyLevel = applyManual(inputState, "furyLevel", levelCoefficient(s.furyLevel, 4.984914075823167, 84.53388511));
-    c.dashLevel = applyManual(inputState, "dashLevel", dashCoefficient(s.dashLevel));
+    c.madType = applyManual(
+      inputState,
+      "madType",
+      madCoefficient(s.madType, s.jobType) * (s.madType === "업글" ? abilityCoefficient(s.ability, 0.00404) : 1),
+    );
+    c.furyLevel = applyManual(
+      inputState,
+      "furyLevel",
+      levelCoefficient(s.furyLevel, 4.984914075823167, 77.3518116164091) *
+        (s.furyLevel === "업글" ? abilityCoefficient(s.ability, 0.00415) : 1),
+    );
+    c.dashLevel = applyManual(
+      inputState,
+      "dashLevel",
+      dashCoefficient(s.dashLevel) * (s.dashLevel === "업글" ? c.ability : 1),
+    );
     c.downFourWayLevel = applyManual(inputState, "downFourWayLevel", downFourWayRatio(inputState.downFourWay));
     c.dashStacks = clampInt(inputState.dashStacks, 1, 6, 1);
     c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
@@ -582,8 +600,7 @@
       const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
       const bossRate = monster.kind === "boss" ? bossCrasherRate(s.jobType) : 1;
-      const madAbilityWeight = s.madType === "업글" ? c.ability : 1;
-      const mad = base * c.madType * madAbilityWeight * percent * hotTimeWeight + flatBonus;
+      const mad = base * c.madType * percent * hotTimeWeight + flatBonus;
       const crasher = (base * c.jobType * percent * hotTimeWeight + flatBonus) * bossRate;
       const skillBase =
         acWeight *
@@ -592,14 +609,12 @@
         (Number(s.str) || 0) *
         (Number(s.con) || 0) *
         hotTimeWeight;
-      const furyAbilityWeight = s.furyLevel === "업글" ? c.ability : 1;
-      const dashAbilityWeight = s.dashLevel === "업글" ? c.ability : 1;
-      const fury = skillBase * furyAbilityWeight * c.furyLevel + flatBonus;
+      const fury = skillBase * c.furyLevel + flatBonus;
       const jobSkillName = isPureJob ? "대쉬" : "암살";
       const downFourWayDamage = fury * c.downFourWayLevel;
       const jobSkillDamage = usesJobSkill
         ? isPureJob
-          ? (skillBase * dashAbilityWeight * c.dashLevel + flatBonus) * c.dashStacks
+          ? (skillBase * c.dashLevel + flatBonus) * c.dashStacks
           : base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus
         : 0;
       const totalDamage = mad + crasher + fury + downFourWayDamage + (usesJobSkill ? jobSkillDamage : 0);
