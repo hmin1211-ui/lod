@@ -17,6 +17,8 @@
   --buff-bg: #f0fdf4;
   --hot: #7c3aed;
   --hot-bg: #f5f3ff;
+  --spirit: #0f766e;
+  --spirit-bg: #ecfdf5;
   --shadow: 0 18px 45px rgba(31, 41, 55, 0.12);
 }
 
@@ -224,6 +226,7 @@ h2 {
 
 .input-table {
   table-layout: fixed;
+  font-size: 0.8rem;
 }
 
 .result-table {
@@ -246,6 +249,16 @@ td {
   padding: 7px 8px;
   border-bottom: 1px solid var(--line);
   vertical-align: middle;
+}
+
+.input-table th {
+  height: 30px;
+  font-size: 0.68rem;
+}
+
+.input-table th,
+.input-table td {
+  padding: 5px 6px;
 }
 
 .input-table th:nth-child(1),
@@ -276,6 +289,13 @@ td {
   background: #ffffff;
   font-weight: 400;
   padding: 6px 8px;
+}
+
+.input-table .field-control {
+  min-height: 27px;
+  border-radius: 5px;
+  padding: 4px 6px;
+  font-size: 0.8rem;
 }
 
 .field-control:focus {
@@ -323,6 +343,11 @@ td {
   white-space: nowrap;
 }
 
+.input-table .inline-helper {
+  grid-template-columns: 61px 7px 106px;
+  gap: 3px;
+}
+
 .helper-label {
   text-align: left;
 }
@@ -333,6 +358,10 @@ td {
 
 .helper-input {
   width: 132px;
+}
+
+.input-table .helper-input {
+  width: 106px;
 }
 
 .field-with-suffix {
@@ -369,6 +398,10 @@ td {
   line-height: 1;
   pointer-events: none;
   white-space: nowrap;
+}
+
+.input-table .input-suffix {
+  font-size: 0.64rem;
 }
 
 .result-heading {
@@ -736,6 +769,10 @@ td {
   background: var(--hot);
 }
 
+.factor-dot.factor-spirit {
+  background: var(--spirit);
+}
+
 .factor-ac,
 .input-factor-ac .field-label {
   color: var(--ac);
@@ -754,6 +791,11 @@ td {
 .factor-hot,
 .input-factor-hot .field-label {
   color: var(--hot);
+}
+
+.factor-spirit,
+.input-factor-spirit .field-label {
+  color: var(--spirit);
 }
 
 .factor-card.factor-ac {
@@ -776,6 +818,11 @@ td {
   background: var(--hot-bg);
 }
 
+.factor-card.factor-spirit {
+  color: var(--spirit);
+  background: var(--spirit-bg);
+}
+
 td.factor-ac {
   background: var(--ac-bg);
 }
@@ -790,6 +837,10 @@ td.factor-buff {
 
 td.factor-hot {
   background: var(--hot-bg);
+}
+
+.input-factor-spirit {
+  background: linear-gradient(90deg, rgba(15, 118, 110, 0.08), transparent 46%);
 }
 
 .input-factor-ac {

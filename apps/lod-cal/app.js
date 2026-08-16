@@ -92,6 +92,7 @@
     damage: "데미지증가",
     buff: "버프가중치",
     hot: "핫타임",
+    spirit: "정령",
   };
 
   const crasherDefs = [
@@ -128,6 +129,7 @@
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
+    { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
   ];
 
   const meteorDefs = [
@@ -157,6 +159,7 @@
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
+    { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
   ];
 
   const defaults = {
@@ -187,6 +190,7 @@
         trap: "Off",
         nar: "Off",
         hotTime: "Off",
+        spirit: 0,
         extraElement: 0,
         horde: "Off",
       },
@@ -216,6 +220,7 @@
         trap: "Off",
         nar: "Off",
         hotTime: "Off",
+        spirit: 0,
         extraElement: 0,
         horde: "Off",
       },
@@ -579,6 +584,7 @@
       "hotTime",
       s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
     );
+    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
     c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
@@ -599,9 +605,10 @@
       const useHot = monster.kind !== "boss";
       const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
+      const spiritWeight = 1 + c.spirit;
       const bossRate = monster.kind === "boss" ? bossCrasherRate(s.jobType) : 1;
-      const mad = base * c.madType * percent * hotTimeWeight + flatBonus;
-      const crasher = (base * c.jobType * percent * hotTimeWeight + flatBonus) * bossRate;
+      const mad = (base * c.madType * percent * hotTimeWeight + flatBonus) * spiritWeight;
+      const crasher = ((base * c.jobType * percent * hotTimeWeight + flatBonus) * bossRate) * spiritWeight;
       const skillBase =
         acWeight *
         damageIncrease *
@@ -609,13 +616,13 @@
         (Number(s.str) || 0) *
         (Number(s.con) || 0) *
         hotTimeWeight;
-      const fury = skillBase * c.furyLevel + flatBonus;
+      const fury = (skillBase * c.furyLevel + flatBonus) * spiritWeight;
       const jobSkillName = isPureJob ? "대쉬" : "암살";
       const downFourWayDamage = fury * c.downFourWayLevel;
       const jobSkillDamage = usesJobSkill
         ? isPureJob
-          ? (skillBase * c.dashLevel + flatBonus) * c.dashStacks
-          : base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus
+          ? ((skillBase * c.dashLevel + flatBonus) * spiritWeight) * c.dashStacks
+          : (base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight
         : 0;
       const totalDamage = mad + crasher + fury + downFourWayDamage + (usesJobSkill ? jobSkillDamage : 0);
       const total = monster.kind === "boss" ? Math.trunc(totalDamage) : null;
@@ -627,6 +634,7 @@
         damageIncrease,
         buffWeight,
         hotTimeWeight,
+        spiritWeight,
         percent,
         mad,
         crasher,
@@ -682,6 +690,7 @@
       "hotTime",
       s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" ? 0.2 : 0,
     );
+    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
     c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", meteorElementValue(s.elementAttack, c));
@@ -710,13 +719,14 @@
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
       const buffWeight = buffWeightWithElement(c.elementAttack, c.focus + c.trap + c.nar);
       const hotTimeWeight = 1 + c.hotTime;
+      const spiritWeight = 1 + c.spirit;
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const castManaCost = c.castMana * c.manaReduction;
       const baseMagic = Number(s.baseMagic) || 0;
       const cappedMana = (mana) => Math.min(Number(mana) || 0, baseMagic);
       const meteorDamage = (mana) =>
-        (cappedMana(mana) - castManaCost) * 1.5 * percent * hotTimeWeight;
+        (cappedMana(mana) - castManaCost) * 1.5 * percent * hotTimeWeight * spiritWeight;
       const oneTickOneMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi);
       const twoTickOneMediDamage = meteorDamage(resolvedSpecs.oneTick * 2 + c.meditation);
       const twoTickTwoMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi * 2);
@@ -728,6 +738,7 @@
         damageIncrease,
         buffWeight,
         hotTimeWeight,
+        spiritWeight,
         percent,
         oneTickOneMediDamage,
         twoTickOneMediDamage,
@@ -745,6 +756,7 @@
     const hotValues = rows.map((row) => row.hotTimeWeight);
     const minHot = Math.min(...hotValues);
     const maxHot = Math.max(...hotValues);
+    const spiritWeight = firstRow.spiritWeight ?? 1;
     const acChangeTotal =
       skill === "crasher"
         ? conversions.ring1 + conversions.ring2 + conversions.curse + conversions.arc + conversions.abre + conversions.ambush
@@ -788,6 +800,13 @@
               : `${formatNumber(minHot, 2)} ~ ${formatNumber(maxHot, 2)}`,
         sub: "최종 데미지 곱",
         factors: ["핫타임"],
+      },
+      {
+        key: "spirit",
+        label: "정령",
+        value: spiritWeight === 1 ? "-" : formatNumber(spiritWeight, 4),
+        sub: "최종 데미지 곱",
+        factors: ["정령"],
       },
     ];
   }
@@ -964,8 +983,8 @@
 
   function editableConversionKeysForSkill(skill) {
     return skill === "crasher"
-      ? new Set(["basePhysical", "madType", "furyLevel", "dashLevel", "downFourWayLevel"])
-      : new Set(["meditation"]);
+      ? new Set(["basePhysical", "madType", "furyLevel", "dashLevel", "downFourWayLevel", "hotTime"])
+      : new Set(["meditation", "hotTime"]);
   }
 
   function readonlyConversionKeysForSkill(skill) {
@@ -1137,6 +1156,7 @@
   function specSuffix(key) {
     const suffixes = {
       manaReduction: "%",
+      spirit: "%",
     };
     return suffixes[key] || "";
   }
