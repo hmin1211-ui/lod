@@ -7,10 +7,10 @@
   const madTypes = ["일반", "업글"];
   const hordeOptions = ["Off", "호드목", "나겔목"];
   const curses = ["없음", "데프", "프라보", "어각", "아나테마"];
-  const crasherElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암"];
-  const meteorElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암"];
-  const reverseElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암"];
-  const elementNameMap = { 수토공: "속공", 생공: "생(암)공", 속암: "암방" };
+  const crasherElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암(반속)", "중립속성"];
+  const meteorElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암(반속)", "중립속성"];
+  const reverseElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암(반속)", "중립속성"];
+  const elementNameMap = { 수토공: "속공", 생공: "생(암)공", 속암: "암방", 암암: "암암(반속)" };
   const hotTimes = ["Off", "평일", "주말"];
   const reverseDebuffs = ["호르/자보", "콜라마", "매프"];
   const reverseBuffs = ["속강", "집중", "나르", "트랩"];
@@ -500,6 +500,15 @@
     return 0;
   }
 
+  function elementFormulaValue(factor, c) {
+    if (factor === 1) return 1;
+    const elementBoost = Number(c.elementBoost) || 0;
+    const extraElement = Number(c.extraElement) || 0;
+    const horde = Number(c.horde) || 0;
+    const bonusSign = factor < 1 ? -1 : 1;
+    return factor ** 2 * (1 + factor * elementBoost - elementBoost + bonusSign * extraElement + bonusSign * horde);
+  }
+
   function jobTypeValue(value) {
     return value === "순수" ? 4 : 2;
   }
@@ -716,15 +725,16 @@
 
   function crasherElementValue(name, c) {
     const table = {
-      숲철공: { factor: 1.35, bonus: c.extraElement },
-      속공: { factor: 1.3, bonus: c.extraElement + c.horde },
-      생암: { factor: 1.2, bonus: c.extraElement },
-      "생(암)공": { factor: 1.1, bonus: c.extraElement },
-      암방: { factor: 0.9, bonus: -c.extraElement - c.horde },
-      암암: { factor: 0.75, bonus: -c.extraElement },
+      숲철공: 1.35,
+      속공: 1.3,
+      생암: 1.2,
+      "생(암)공": 1.1,
+      암방: 0.9,
+      "암암(반속)": 0.75,
+      중립속성: 1,
     };
     const selected = table[normalizeElementName(name)] || table.속공;
-    return selected.factor ** (2 + c.elementBoost) * (1 + selected.bonus);
+    return elementFormulaValue(selected, c);
   }
 
   function calculateMeteor(inputState = state.meteor) {
@@ -878,15 +888,16 @@
 
   function meteorElementValue(name, c) {
     const table = {
-      숲철공: { factor: 1.35, bonus: c.extraElement },
-      속공: { factor: 1.3, bonus: c.extraElement },
-      생암: { factor: 1.2, bonus: c.extraElement },
-      "생(암)공": { factor: 1.1, bonus: c.extraElement },
-      암방: { factor: 0.9, bonus: -c.extraElement - c.horde },
-      암암: { factor: 0.75, bonus: -c.extraElement },
+      숲철공: 1.35,
+      속공: 1.3,
+      생암: 1.2,
+      "생(암)공": 1.1,
+      암방: 0.9,
+      "암암(반속)": 0.75,
+      중립속성: 1,
     };
-    const selected = table[normalizeElementName(name)] || table.암암;
-    return roundDown(selected.factor ** (2 + c.elementBoost) * (1 + selected.bonus), 4);
+    const selected = table[normalizeElementName(name)] || table["암암(반속)"];
+    return roundDown(elementFormulaValue(selected, c), 4);
   }
 
   function getCurrentResult() {
