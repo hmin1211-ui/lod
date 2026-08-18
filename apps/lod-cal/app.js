@@ -31,6 +31,7 @@
   const meteorCastMana = 12960;
   const crasherNagelringShotHp = 10300000;
   const resultFontScales = [100, 85, 70];
+  const crasherDamageKeys = ["mad", "crasher", "fury", "downFourWay", "jobSkill"];
 
   const curseValueCrasher = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
   const curseValueMeteor = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
@@ -263,7 +264,21 @@
       downFourWay: defaultDownFourWayState(),
       dashStacks: 1,
       resultFontScale: 100,
+      ...(skill === "crasher" ? { damageIncludes: defaultCrasherDamageIncludes() } : {}),
     };
+  }
+
+  function defaultCrasherDamageIncludes() {
+    return crasherDamageKeys.reduce((acc, key) => ({ ...acc, [key]: true }), {});
+  }
+
+  function normalizeCrasherDamageIncludes(value) {
+    const defaults = defaultCrasherDamageIncludes();
+    if (!value || typeof value !== "object") return defaults;
+    return crasherDamageKeys.reduce((acc, key) => {
+      acc[key] = value[key] !== false;
+      return acc;
+    }, {});
   }
 
   function defaultDownFourWayState() {
@@ -351,6 +366,9 @@
       state[skill].downFourWay = { ...state[skill].downFourWay, ...(saved[skill].downFourWay || {}) };
       state[skill].dashStacks = saved[skill].dashStacks;
       state[skill].resultFontScale = saved[skill].resultFontScale;
+      if (skill === "crasher") {
+        state[skill].damageIncludes = normalizeCrasherDamageIncludes(saved[skill].damageIncludes);
+      }
       migrateSavedSkillState(skill);
     }
     return true;
@@ -360,6 +378,9 @@
     const skillState = state[skill];
     if (skill === "crasher" && skillState.specs.jobType === "전직") {
       skillState.specs.jobType = "도전";
+    }
+    if (skill === "crasher") {
+      skillState.damageIncludes = normalizeCrasherDamageIncludes(skillState.damageIncludes);
     }
     if (skillState.specs.horde === "On") {
       skillState.specs.horde = "호드목";
@@ -658,6 +679,7 @@
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
     c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
+    const damageIncludes = normalizeCrasherDamageIncludes(inputState.damageIncludes);
 
     const monsterRows = [...crasherMonsterRows, ...normalizeCustomMonsters(inputState.customMonsters)];
     const rows = monsterRows.map((monster) => {
@@ -694,7 +716,12 @@
           ? ((skillBase * c.dashLevel + flatBonus) * spiritWeight) * c.dashStacks
           : (base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight
         : 0;
-      const totalDamage = mad + crasher + fury + downFourWayDamage + (usesJobSkill ? jobSkillDamage : 0);
+      const totalDamage =
+        (damageIncludes.mad ? mad : 0) +
+        (damageIncludes.crasher ? crasher : 0) +
+        (damageIncludes.fury ? fury : 0) +
+        (damageIncludes.downFourWay ? downFourWayDamage : 0) +
+        (usesJobSkill && damageIncludes.jobSkill ? jobSkillDamage : 0);
       const total = monster.kind === "boss" ? Math.trunc(totalDamage) : null;
       const balrogShot = monster.kind === "boss" ? 36000000 - total : null;
       return {
@@ -720,7 +747,7 @@
     });
 
     const orderedRows = orderedRowsForSkill("crasher", rows);
-    return { conversions: c, rows: orderedRows, factorSummary: buildFactorSummary(orderedRows, c, "crasher") };
+    return { conversions: c, rows: orderedRows, damageIncludes, factorSummary: buildFactorSummary(orderedRows, c, "crasher") };
   }
 
   function crasherElementValue(name, c) {
@@ -1327,8 +1354,24 @@
       const hideJobSkill = jobType === "직전/법전";
       const crasherLabel = isPure ? "데빌" : "크래셔";
       const jobSkillLabel = isPure ? "대쉬" : "암살";
-      const jobSkillHeader = isPure ? renderDashStackHeader() : jobSkillLabel;
-      const headers = ["몬스터", "기존 AC", "AC변화", "AC가중치", "데미지증가", "버프가중치", "핫타임", "퍼센트", "매드", crasherLabel, "퓨리", "내려/사방"];
+      const damageIncludes = result.damageIncludes || normalizeCrasherDamageIncludes(state.crasher.damageIncludes);
+      const jobSkillHeader = isPure
+        ? renderDashStackHeader({ includeToggle: true, damageIncludes })
+        : renderCrasherDamageHeader("jobSkill", jobSkillLabel, damageIncludes);
+      const headers = [
+        "몬스터",
+        "기존 AC",
+        "AC변화",
+        "AC가중치",
+        "데미지증가",
+        "버프가중치",
+        "핫타임",
+        "퍼센트",
+        renderCrasherDamageHeader("mad", "매드", damageIncludes),
+        renderCrasherDamageHeader("crasher", crasherLabel, damageIncludes),
+        renderCrasherDamageHeader("fury", "퓨리", damageIncludes),
+        renderCrasherDamageHeader("downFourWay", "내려/사방", damageIncludes),
+      ];
       if (!hideJobSkill) headers.push(jobSkillHeader);
       headers.push("합계", "비고");
       container.innerHTML = renderGroupedTables(result.rows, {
@@ -1351,7 +1394,7 @@
           const jobSkillCellClass = isPure ? "damage-strong dash-stack-cell" : "damage-strong";
           const jobSkillCell = hideJobSkill
             ? ""
-            : `<td data-label="${jobSkillLabel}" class="${jobSkillCellClass}">${mobileDashControl}<span class="dash-stack-damage">${formatCrasherDamage(row, row.jobSkillDamage)}</span></td>`;
+            : `<td data-label="${jobSkillLabel}" class="${jobSkillCellClass}">${mobileDashControl}<span class="dash-stack-damage">${formatIncludedCrasherDamage(row, row.jobSkillDamage, damageIncludes.jobSkill)}</span></td>`;
           return `<tr>
             <td data-label="몬스터">${row.name}${deleteButton}</td>
             <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
@@ -1361,10 +1404,10 @@
             <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 4)}</td>
             <td data-label="핫타임" class="factor-hot">${formatHotTimeWeight(row.hotTimeWeight)}</td>
             <td data-label="퍼센트">${formatNumber(row.percent, 4)}</td>
-            <td data-label="매드" class="damage-strong">${formatCrasherDamage(row, row.mad)}</td>
-            <td data-label="${crasherLabel}" class="damage-strong">${formatCrasherDamage(row, row.crasher)}</td>
-            <td data-label="퓨리" class="damage-strong">${formatCrasherDamage(row, row.fury)}</td>
-            <td data-label="내려/사방" class="damage-strong">${formatCrasherDamage(row, row.downFourWayDamage)}</td>
+            <td data-label="매드" class="damage-strong">${formatIncludedCrasherDamage(row, row.mad, damageIncludes.mad)}</td>
+            <td data-label="${crasherLabel}" class="damage-strong">${formatIncludedCrasherDamage(row, row.crasher, damageIncludes.crasher)}</td>
+            <td data-label="퓨리" class="damage-strong">${formatIncludedCrasherDamage(row, row.fury, damageIncludes.fury)}</td>
+            <td data-label="내려/사방" class="damage-strong">${formatIncludedCrasherDamage(row, row.downFourWayDamage, damageIncludes.downFourWay)}</td>
             ${jobSkillCell}
             <td data-label="합계" class="damage-total">${formatNumber(row.totalDamage)}</td>
             <td data-label="비고">${note}</td>
@@ -1419,6 +1462,18 @@
     return `${defaultNagelringShot || customShot ? '<span class="shot-mark">[샷]</span> ' : ""}${formatNumber(value)}`;
   }
 
+  function formatIncludedCrasherDamage(row, value, included) {
+    return included ? formatCrasherDamage(row, value) : "-";
+  }
+
+  function renderCrasherDamageHeader(key, label, damageIncludes) {
+    const checked = damageIncludes?.[key] !== false ? "checked" : "";
+    return `<label class="crasher-damage-head">
+      <input class="crasher-damage-check" type="checkbox" data-crasher-damage-include="${key}" ${checked} aria-label="${label} 합계 포함">
+      <span>${label}</span>
+    </label>`;
+  }
+
   function formatMeteorDamage(row, value) {
     const defaultBaekyuShot = row.name === "백유고층" && value >= 654732;
     const customShot = row.custom && row.hp && value >= row.hp;
@@ -1429,15 +1484,28 @@
     return value === 1 ? "-" : formatNumber(value, 2);
   }
 
-  function renderDashStackHeader() {
+  function renderDashStackHeader(options = {}) {
     const current = clampInt(state.crasher.dashStacks, 1, 6, 1);
-    const options = [1, 2, 3, 4, 5, 6]
-      .map((value) => `<option value="${value}" ${value === current ? "selected" : ""}>${value}중</option>`)
+    const stackOptions = [1, 2, 3, 4, 5, 6]
+      .map((value) => `<option value="${value}" ${value === current ? "selected" : ""}>${value}</option>`)
       .join("");
-    return `<span class="dash-stack-head">
+    const includeToggle = options.includeToggle
+      ? `<input class="crasher-damage-check" type="checkbox" data-crasher-damage-include="jobSkill" ${options.damageIncludes?.jobSkill !== false ? "checked" : ""} aria-label="대쉬 합계 포함">`
+      : "";
+    const stackControl = `<span class="dash-stack-control">
       <span>대쉬</span>
-      <select class="dash-stack-select" data-dash-stack aria-label="대쉬 중첩수">${options}</select>
+      <span class="dash-stack-select-wrap">
+        <select class="dash-stack-select" data-dash-stack aria-label="대쉬 중첩수">${stackOptions}</select>
+      </span>
+      <span class="dash-stack-unit">중</span>
     </span>`;
+    if (options.includeToggle) {
+      return `<span class="dash-stack-head dash-stack-head-checked">
+        ${includeToggle}
+        ${stackControl}
+      </span>`;
+    }
+    return `<span class="dash-stack-head">${stackControl}</span>`;
   }
 
   function escapeAttribute(value) {
@@ -1841,6 +1909,14 @@
     });
 
     document.querySelector(".result-table-wrap").addEventListener("change", (event) => {
+      const damageInclude = event.target.closest("[data-crasher-damage-include]");
+      if (damageInclude) {
+        state.crasher.damageIncludes = normalizeCrasherDamageIncludes(state.crasher.damageIncludes);
+        state.crasher.damageIncludes[damageInclude.dataset.crasherDamageInclude] = damageInclude.checked;
+        saveState();
+        render();
+        return;
+      }
       const select = event.target.closest("[data-dash-stack]");
       if (!select) return;
       state.crasher.dashStacks = clampInt(select.value, 1, 6, 1);
