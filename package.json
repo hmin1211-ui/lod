@@ -1,0 +1,8 @@
+{
+  "name": "lod-keyopt",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "node tools/build-static.mjs"
+  }
+}
