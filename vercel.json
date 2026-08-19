@@ -1,8 +1,20 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "echo \"No install required\"",
-  "buildCommand": "mkdir -p vercel-static/calculator && cp apps/lod-cal/index.html apps/lod-cal/styles.css apps/lod-cal/app.js vercel-static/ && cp apps/lod-cal/index.html apps/lod-cal/styles.css apps/lod-cal/app.js vercel-static/calculator/",
+  "buildCommand": "node tools/build-static.mjs",
   "outputDirectory": "vercel-static",
+  "cleanUrls": true,
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=0, must-revalidate"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/calculator",
