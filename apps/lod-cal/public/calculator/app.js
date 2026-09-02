@@ -55,7 +55,6 @@
   const resultFontScales = [100, 85, 70];
   const crasherDamageKeys = ["mad", "crasher", "fury", "downFourWay", "jobSkill"];
   const martialDamageKeys = ["dara", "guyang", "whirlwind", "punggak", "dangak", "jiyeol"];
-  const martialGuyangOptions = ["일반", "업글"];
   const martialKickOptions = [4, 10, "업글"];
   const martialWindOptions = [2, 10, "업글"];
   const martialDaraManaModes = ["풀마", "1틱"];
@@ -76,7 +75,7 @@
   };
   const martialTechniqueDefs = [
     { key: "daraLevel", damageKey: "dara", label: "다라", type: "fixed" },
-    { key: "guyangLevel", damageKey: "guyang", label: "구양", type: "select", options: martialGuyangOptions },
+    { key: "guyangLevel", damageKey: "guyang", label: "구양", type: "fixed" },
     { key: "whirlwindLevel", damageKey: "whirlwind", label: "선풍", type: "select", options: martialWindOptions },
     { key: "punggakLevel", damageKey: "punggak", label: "붕각", type: "select", options: martialKickOptions },
     { key: "dangakLevel", damageKey: "dangak", label: "단각", type: "select", options: martialKickOptions },
@@ -338,7 +337,7 @@
     martial: {
       specs: {
         daraLevel: "업글",
-        guyangLevel: "업글",
+        guyangLevel: "일반",
         whirlwindLevel: "업글",
         punggakLevel: "업글",
         dangakLevel: "업글",
@@ -642,9 +641,8 @@
     if (skill === "martial") {
       skillState.damageIncludes = normalizeMartialDamageIncludes(skillState.damageIncludes);
       delete skillState.convManual.daraLevel;
-      if (skillState.specs.guyangLevel === "업글1" || skillState.specs.guyangLevel === "업글2") {
-        skillState.specs.guyangLevel = "업글";
-      }
+      delete skillState.convManual.guyangLevel;
+      skillState.specs.guyangLevel = "일반";
       if (skillState.specs.focus === "On") {
         skillState.specs.focus = "일반";
       }
@@ -1001,7 +999,7 @@
 
   function martialCoefficient(key, level, ability) {
     if (key === "daraLevel") return 2;
-    if (key === "guyangLevel") return level === "업글" || level === "업글1" || level === "업글2" ? 0.42 : 0.4;
+    if (key === "guyangLevel") return 0.4;
     if (level === "업글" || level === "업글1" || level === "업글2") {
       return (martialUpgradeCoefficients[key] ?? 0) * abilityCoefficient(ability, 0.00415);
     }
