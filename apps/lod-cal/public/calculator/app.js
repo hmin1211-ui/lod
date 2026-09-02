@@ -1,5 +1,7 @@
 (function () {
   const onOff = ["Off", "On"];
+  const focusOptions = ["Off", "일반", "업글"];
+  const dummyFocusOptions = ["Off", "집중(전사)", "변신마스터", "정신집중(도가)"];
   const zeroToThree = [0, 1, 2, 3];
   const zeroToSix = [0, 1, 2, 3, 4, 5, 6];
   const zeroToTenUpgrade = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "업글"];
@@ -10,8 +12,28 @@
   const crasherElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암(반속)", "중립속성"];
   const meteorElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암(반속)", "중립속성"];
   const reverseElements = ["숲철공", "속공", "생암", "생(암)공", "암방", "암암(반속)", "중립속성"];
+  const coefficientElements = [
+    { value: "생암", label: "생암" },
+    { value: "암암(반속)", label: "암암" },
+    { value: "암방", label: "속암" },
+  ];
+  const coefficientStats = [
+    { key: "str", label: "힘" },
+    { key: "con", label: "콘" },
+    { key: "dex", label: "덱스" },
+    { key: "int", label: "인트" },
+    { key: "damage", label: "DAM" },
+  ];
+  const coefficientOperators = [
+    { key: "multiply", label: "곱연산" },
+    { key: "sum", label: "합연산" },
+  ];
   const elementNameMap = { 수토공: "속공", 생공: "생(암)공", 속암: "암방", 암암: "암암(반속)" };
   const hotTimes = ["Off", "평일", "주말"];
+  const skillKeys = ["crasher", "martial", "meteor"];
+  const tabKeys = [...skillKeys, "dummy"];
+  const physicalSkillKeys = new Set(["crasher", "martial"]);
+  const skillLabels = { crasher: "전사", martial: "무도가", meteor: "메테오", dummy: "허수아비" };
   const reverseDebuffs = ["호르/자보", "콜라마", "매프"];
   const reverseBuffs = ["속강", "집중", "나르", "트랩"];
   const reverseDummyAcFactors = [
@@ -32,6 +54,35 @@
   const crasherNagelringShotHp = 10300000;
   const resultFontScales = [100, 85, 70];
   const crasherDamageKeys = ["mad", "crasher", "fury", "downFourWay", "jobSkill"];
+  const martialDamageKeys = ["dara", "guyang", "whirlwind", "punggak", "dangak", "jiyeol"];
+  const martialGuyangOptions = ["일반", "업글"];
+  const martialKickOptions = [4, 10, "업글"];
+  const martialWindOptions = [2, 10, "업글"];
+  const martialDaraManaModes = ["풀마", "1틱"];
+  const martialBaseCoefficients = {
+    tail: 3.04702800361337,
+    jiyeol: 2.085980126467931,
+    wind: 1.564489611562782,
+    scratch: 1.303739837398374,
+    hawk: 1.117488708220416,
+    combo: 0.670487804878049,
+    dual: 0.2607407407407407,
+  };
+  const martialUpgradeCoefficients = {
+    dangakLevel: 20.81838,
+    punggakLevel: 30.52726,
+    whirlwindLevel: 19.423302,
+    jiyeolLevel: 23.25,
+  };
+  const martialTechniqueDefs = [
+    { key: "daraLevel", damageKey: "dara", label: "다라", type: "fixed" },
+    { key: "guyangLevel", damageKey: "guyang", label: "구양", type: "select", options: martialGuyangOptions },
+    { key: "whirlwindLevel", damageKey: "whirlwind", label: "선풍", type: "select", options: martialWindOptions },
+    { key: "punggakLevel", damageKey: "punggak", label: "붕각", type: "select", options: martialKickOptions },
+    { key: "dangakLevel", damageKey: "dangak", label: "단각", type: "select", options: martialKickOptions },
+    { key: "jiyeolLevel", damageKey: "jiyeol", label: "지열", type: "select", options: martialWindOptions },
+  ];
+  const martialInputTechniqueDefs = martialTechniqueDefs.filter((technique) => technique.type !== "fixed");
 
   const curseValueCrasher = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
   const curseValueMeteor = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
@@ -179,6 +230,77 @@
     { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
   ];
 
+  const martialDefs = [
+    { section: "기본" },
+    { key: "ability", label: "어빌", type: "number" },
+    { key: "basePhysical", label: "무장체", type: "number" },
+    { key: "baseMagic", label: "무장마", type: "number" },
+    { key: "str", label: "힘", type: "number" },
+    { key: "con", label: "콘", type: "number" },
+    { section: "기술" },
+    ...martialInputTechniqueDefs,
+    { section: "장비 - 에테르 강화 수치 입력" },
+    { key: "ring1", label: "반지1", type: "number", factors: ["ac"] },
+    { key: "ring2", label: "반지2", type: "number", factors: ["ac"] },
+    { key: "weapon", label: "무기", type: "number", factors: ["damage"] },
+    { key: "acc1", label: "악세1", type: "number", factors: ["damage"] },
+    { key: "acc2", label: "악세2", type: "number", factors: ["damage"] },
+    { key: "extraElement", label: "이펙트", type: "number", factors: ["buff"] },
+    { key: "horde", label: "호드/나겔목", type: "select", options: hordeOptions, factors: ["buff"] },
+    { section: "AC가중치" },
+    { key: "curse", label: "저주", type: "select", options: curses, factors: ["ac"] },
+    { key: "arc", label: "아크", type: "select", options: zeroToThree, factors: ["ac"] },
+    { key: "abre", label: "아브", type: "select", options: zeroToThree, factors: ["ac"] },
+    { key: "ambush", label: "기습", type: "select", options: onOff, factors: ["ac"] },
+    { section: "버프가중치" },
+    { key: "elementBoost", label: "속강", type: "select", options: onOff, factors: ["buff"] },
+    { key: "elementAttack", label: "속성(공방)", type: "select", options: crasherElements, factors: ["buff"] },
+    { key: "move", label: "움(렙)", type: "select", options: zeroToSix, factors: ["buff"] },
+    { key: "focus", label: "집중", type: "select", options: focusOptions, factors: ["buff"] },
+    { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
+    { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
+    { section: "기타" },
+    { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
+    { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
+  ];
+
+  const dummyDefs = [
+    { section: "기본" },
+    { key: "ability", label: "어빌", type: "number" },
+    { key: "basePhysical", label: "무장체", type: "number" },
+    { key: "baseMagic", label: "무장마", type: "number" },
+    { key: "weaponMin", label: "무기 민뎀", type: "number" },
+    { key: "weaponMax", label: "무기 맥뎀", type: "number" },
+    { key: "str", label: "힘", type: "number" },
+    { key: "con", label: "콘", type: "number" },
+    { key: "dex", label: "덱스", type: "number" },
+    { key: "int", label: "인트", type: "number" },
+    { key: "damage", label: "DAM", type: "number" },
+    { section: "장비 - 에테르 강화 수치 입력" },
+    { key: "ring1", label: "반지1", type: "number", factors: ["ac"] },
+    { key: "ring2", label: "반지2", type: "number", factors: ["ac"] },
+    { key: "weapon", label: "무기", type: "number", factors: ["damage"] },
+    { key: "acc1", label: "악세1", type: "number", factors: ["damage"] },
+    { key: "acc2", label: "악세2", type: "number", factors: ["damage"] },
+    { key: "extraElement", label: "이펙트", type: "number", factors: ["buff"] },
+    { key: "horde", label: "호드/나겔목", type: "select", options: hordeOptions, factors: ["buff"] },
+    { section: "AC가중치" },
+    { key: "curse", label: "저주", type: "select", options: curses, factors: ["ac"] },
+    { key: "arc", label: "아크", type: "select", options: zeroToThree, factors: ["ac"] },
+    { key: "abre", label: "아브", type: "select", options: zeroToThree, factors: ["ac"] },
+    { key: "ambush", label: "기습", type: "select", options: onOff, factors: ["ac"] },
+    { section: "버프가중치" },
+    { key: "elementBoost", label: "속강", type: "select", options: onOff, factors: ["buff"] },
+    { key: "elementAttack", label: "속성(공방)", type: "select", options: crasherElements, factors: ["buff"] },
+    { key: "move", label: "움(렙)", type: "select", options: zeroToSix, factors: ["buff"] },
+    { key: "focus", label: "집중", type: "select", options: dummyFocusOptions, factors: ["buff"] },
+    { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
+    { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
+    { section: "기타" },
+    { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
+    { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
+  ];
+
   const defaults = {
     crasher: {
       specs: {
@@ -212,6 +334,42 @@
         horde: "Off",
       },
       conv: { flatPhysical: 0, strConverted: 0, conConverted: 0 },
+    },
+    martial: {
+      specs: {
+        daraLevel: "업글",
+        guyangLevel: "업글",
+        whirlwindLevel: "업글",
+        punggakLevel: "업글",
+        dangakLevel: "업글",
+        jiyeolLevel: "업글",
+        ability: 201,
+        basePhysical: 1000000,
+        baseMagic: 1000000,
+        str: 180,
+        con: 180,
+        ring1: 0,
+        ring2: 0,
+        weapon: 0,
+        acc1: 0,
+        acc2: 0,
+        elementBoost: "Off",
+        elementAttack: "숲철공",
+        move: 0,
+        curse: "없음",
+        arc: 0,
+        abre: 0,
+        ambush: "Off",
+        focus: "Off",
+        trap: "Off",
+        nar: "Off",
+        hotTime: "Off",
+        spirit: 0,
+        extraElement: 0,
+        horde: "Off",
+      },
+      conv: { flatPhysical: 0, strConverted: 0, conConverted: 0 },
+      daraManaMode: "풀마",
     },
     meteor: {
       specs: {
@@ -248,7 +406,9 @@
   const state = {
     skill: "crasher",
     crasher: freshSkillState("crasher"),
+    martial: freshSkillState("martial"),
     meteor: freshSkillState("meteor"),
+    dummy: defaultDummyState(),
   };
   const storageKey = "darkAgesDamageCalculator.v1";
 
@@ -265,6 +425,7 @@
       dashStacks: 1,
       resultFontScale: 100,
       ...(skill === "crasher" ? { damageIncludes: defaultCrasherDamageIncludes() } : {}),
+      ...(skill === "martial" ? { damageIncludes: defaultMartialDamageIncludes(), daraManaMode: defaults.martial.daraManaMode } : {}),
     };
   }
 
@@ -276,6 +437,19 @@
     const defaults = defaultCrasherDamageIncludes();
     if (!value || typeof value !== "object") return defaults;
     return crasherDamageKeys.reduce((acc, key) => {
+      acc[key] = value[key] !== false;
+      return acc;
+    }, {});
+  }
+
+  function defaultMartialDamageIncludes() {
+    return martialDamageKeys.reduce((acc, key) => ({ ...acc, [key]: true }), {});
+  }
+
+  function normalizeMartialDamageIncludes(value) {
+    const defaults = defaultMartialDamageIncludes();
+    if (!value || typeof value !== "object") return defaults;
+    return martialDamageKeys.reduce((acc, key) => {
       acc[key] = value[key] !== false;
       return acc;
     }, {});
@@ -299,7 +473,7 @@
       dummyHotTimePercentInput: true,
       dummySpirit: 0,
       targetAttackElement: defaults[skill].specs.elementAttack,
-      targetAc: skill === "crasher" ? -153 : -8,
+      targetAc: physicalSkillKeys.has(skill) ? -153 : -8,
       targetHotTime: 0,
       targetSpirit: 0,
       buffs: [],
@@ -307,8 +481,68 @@
     };
   }
 
+  function defaultDummySpecs() {
+    return {
+      ability: 201,
+      basePhysical: 1000000,
+      baseMagic: 1000000,
+      weaponMin: 0,
+      weaponMax: 0,
+      str: 180,
+      con: 180,
+      dex: 180,
+      int: 180,
+      damage: 0,
+      ring1: 0,
+      ring2: 0,
+      weapon: 0,
+      acc1: 0,
+      acc2: 0,
+      elementBoost: "Off",
+      elementAttack: "숲철공",
+      move: 0,
+      curse: "없음",
+      arc: 0,
+      abre: 0,
+      ambush: "Off",
+      focus: "Off",
+      trap: "Off",
+      nar: "Off",
+      hotTime: "Off",
+      spirit: 0,
+      extraElement: 0,
+      horde: "Off",
+    };
+  }
+
+  function defaultDummyState() {
+    return {
+      sourceSkill: "martial",
+      collapsedCards: {
+        reverse: false,
+        coefficient: false,
+      },
+      specs: defaultDummySpecs(),
+      specManual: {},
+      convManual: {},
+      reverse: defaultReverseState("martial"),
+      coefficient: {
+        damage: "",
+        necklaceBonus: 0,
+        attackElement: "생암",
+        dummyAcFactors: ["rings"],
+        dummyBuffFactors: reverseDummyBuffFactors.map((factor) => factor.key),
+        dummyHotTime: 0,
+        dummySpirit: 0,
+        stats: ["str", "con"],
+        operator: "multiply",
+        useAbility: false,
+      },
+    };
+  }
+
   function defaultSectionOrder(skill) {
-    const rows = skill === "crasher" ? crasherMonsterRows : meteorMonsterRows;
+    const rows = physicalSkillKeys.has(skill) ? crasherMonsterRows : meteorMonsterRows;
     return [...new Set(rows.map((row) => row.section))];
   }
 
@@ -344,16 +578,18 @@
       savedAt: new Date().toISOString(),
       skill: state.skill,
       crasher: state.crasher,
+      martial: state.martial,
       meteor: state.meteor,
+      dummy: state.dummy,
     };
   }
 
   function applyImportedState(saved) {
     if (!saved || typeof saved !== "object") return false;
-    if (saved.skill === "crasher" || saved.skill === "meteor") {
+    if (tabKeys.includes(saved.skill)) {
       state.skill = saved.skill;
     }
-    for (const skill of ["crasher", "meteor"]) {
+    for (const skill of skillKeys) {
       if (!saved[skill]) continue;
       state[skill] = freshSkillState(skill);
       state[skill].specs = { ...state[skill].specs, ...(saved[skill].specs || {}) };
@@ -369,8 +605,29 @@
       if (skill === "crasher") {
         state[skill].damageIncludes = normalizeCrasherDamageIncludes(saved[skill].damageIncludes);
       }
+      if (skill === "martial") {
+        state[skill].damageIncludes = normalizeMartialDamageIncludes(saved[skill].damageIncludes);
+        state[skill].daraManaMode = martialDaraManaModes.includes(saved[skill].daraManaMode)
+          ? saved[skill].daraManaMode
+          : defaults.martial.daraManaMode;
+      }
       migrateSavedSkillState(skill);
     }
+    if (saved.dummy) {
+      state.dummy = { ...defaultDummyState(), ...saved.dummy };
+      state.dummy.specs = { ...defaultDummySpecs(), ...(saved.dummy.specs || {}) };
+      state.dummy.specManual = { ...(saved.dummy.specManual || {}) };
+      state.dummy.convManual = { ...(saved.dummy.convManual || {}) };
+      state.dummy.coefficient = { ...defaultDummyState().coefficient, ...(saved.dummy.coefficient || {}) };
+    } else {
+      const sourceSkill = skillKeys.includes(saved.skill) ? saved.skill : "martial";
+      state.dummy = {
+        ...defaultDummyState(),
+        sourceSkill,
+        reverse: { ...defaultReverseState(sourceSkill), ...(state[sourceSkill]?.reverse || {}) },
+      };
+    }
+    normalizeDummyState();
     return true;
   }
 
@@ -382,13 +639,32 @@
     if (skill === "crasher") {
       skillState.damageIncludes = normalizeCrasherDamageIncludes(skillState.damageIncludes);
     }
+    if (skill === "martial") {
+      skillState.damageIncludes = normalizeMartialDamageIncludes(skillState.damageIncludes);
+      delete skillState.convManual.daraLevel;
+      if (skillState.specs.guyangLevel === "업글1" || skillState.specs.guyangLevel === "업글2") {
+        skillState.specs.guyangLevel = "업글";
+      }
+      if (skillState.specs.focus === "On") {
+        skillState.specs.focus = "일반";
+      }
+      if (!focusOptions.includes(skillState.specs.focus)) {
+        skillState.specs.focus = "Off";
+      }
+      skillState.daraManaMode = martialDaraManaModes.includes(skillState.daraManaMode)
+        ? skillState.daraManaMode
+        : defaults.martial.daraManaMode;
+    }
     if (skillState.specs.horde === "On") {
       skillState.specs.horde = "호드목";
     }
     skillState.specs.elementAttack = normalizeElementName(skillState.specs.elementAttack);
     if (skillState.reverse?.attackElement) {
       skillState.reverse.attackElement = normalizeElementName(skillState.reverse.attackElement);
-      if (!skillState.reverse.targetAttackElement) {
+      if (
+        !skillState.reverse.targetAttackElement ||
+        skillState.reverse.targetAttackElement === defaultReverseState(skill).targetAttackElement
+      ) {
         skillState.reverse.targetAttackElement = skillState.reverse.attackElement;
       }
       if (!skillState.reverse.dummyAttackElement) {
@@ -396,7 +672,7 @@
       }
     }
     if (
-      skill === "crasher" &&
+      physicalSkillKeys.has(skill) &&
       Object.prototype.hasOwnProperty.call(skillState.convManual, "flatPhysical") &&
       !Object.prototype.hasOwnProperty.call(skillState.convManual, "basePhysical")
     ) {
@@ -448,6 +724,7 @@
     skillState.reverse.buffs = skillState.reverse.buffs.filter((buff) => reverseBuffs.includes(buff));
     skillState.reverse.debuffs = skillState.reverse.debuffs.filter((debuff) => reverseDebuffs.includes(debuff));
     delete skillState.reverse.belt;
+    delete skillState.reverse.attackElement;
     const options = reverseElementOptionsForSkill();
     skillState.reverse.dummyAttackElement = normalizeElementName(skillState.reverse.dummyAttackElement);
     skillState.reverse.targetAttackElement = normalizeElementName(skillState.reverse.targetAttackElement);
@@ -457,6 +734,162 @@
     if (!options.includes(skillState.reverse.targetAttackElement)) {
       skillState.reverse.targetAttackElement = defaults[skill].specs.elementAttack;
     }
+  }
+
+  function getDummySourceSkill() {
+    if (!state.dummy || !skillKeys.includes(state.dummy.sourceSkill)) {
+      state.dummy = { ...defaultDummyState(), ...(state.dummy || {}), sourceSkill: "martial" };
+    }
+    return state.dummy.sourceSkill;
+  }
+
+  function normalizeDummyState() {
+    if (!state.dummy || typeof state.dummy !== "object") {
+      state.dummy = defaultDummyState();
+    }
+    state.dummy.collapsedCards = {
+      ...defaultDummyState().collapsedCards,
+      ...(state.dummy.collapsedCards || {}),
+    };
+    if (!skillKeys.includes(state.dummy.sourceSkill)) {
+      state.dummy.sourceSkill = "martial";
+    }
+    const sourceSkill = state.dummy.sourceSkill;
+    state.dummy.specs = { ...defaultDummySpecs(), ...(state.dummy.specs || {}) };
+    state.dummy.specManual = { ...(state.dummy.specManual || {}) };
+    state.dummy.convManual = { ...(state.dummy.convManual || {}) };
+    if (state.dummy.specs.horde === "On") {
+      state.dummy.specs.horde = "호드목";
+    }
+    if (state.dummy.specs.focus === "On") {
+      state.dummy.specs.focus = sourceSkill === "crasher" ? "집중(전사)" : "변신마스터";
+    }
+    if (state.dummy.specs.focus === "일반") {
+      state.dummy.specs.focus = "변신마스터";
+    }
+    if (state.dummy.specs.focus === "업글") {
+      state.dummy.specs.focus = "정신집중(도가)";
+    }
+    if (!dummyFocusOptions.includes(state.dummy.specs.focus)) {
+      state.dummy.specs.focus = "Off";
+    }
+    state.dummy.specs.elementAttack = normalizeElementName(state.dummy.specs.elementAttack);
+    if (!crasherElements.includes(state.dummy.specs.elementAttack)) {
+      state.dummy.specs.elementAttack = defaultDummySpecs().elementAttack;
+    }
+    for (const key of readonlyConversionKeysForSkill("dummy")) {
+      delete state.dummy.convManual[key];
+    }
+    const rawDummyReverse = state.dummy.reverse || {};
+    state.dummy.reverse = { ...defaultReverseState(sourceSkill), ...rawDummyReverse };
+    if (rawDummyReverse.attackElement && !rawDummyReverse.targetAttackElement) {
+      state.dummy.reverse.targetAttackElement = rawDummyReverse.attackElement;
+    }
+    if (
+      rawDummyReverse.attackElement &&
+      state.dummy.reverse.targetAttackElement === defaultReverseState(sourceSkill).targetAttackElement
+    ) {
+      state.dummy.reverse.targetAttackElement = rawDummyReverse.attackElement;
+    }
+    if (rawDummyReverse.attackElement && !rawDummyReverse.dummyAttackElement) {
+      state.dummy.reverse.dummyAttackElement = defaults[sourceSkill].specs.elementAttack;
+    }
+    if (!Array.isArray(state.dummy.reverse.buffs)) state.dummy.reverse.buffs = [];
+    if (!Array.isArray(state.dummy.reverse.debuffs)) state.dummy.reverse.debuffs = [];
+    if (!Array.isArray(state.dummy.reverse.dummyAcFactors)) state.dummy.reverse.dummyAcFactors = ["rings"];
+    if (!Array.isArray(state.dummy.reverse.dummyBuffFactors)) {
+      state.dummy.reverse.dummyBuffFactors = reverseDummyBuffFactors.map((factor) => factor.key);
+    }
+    state.dummy.reverse.buffs = state.dummy.reverse.buffs.filter((buff) => reverseBuffs.includes(buff));
+    state.dummy.reverse.debuffs = state.dummy.reverse.debuffs.filter((debuff) => reverseDebuffs.includes(debuff));
+    delete state.dummy.reverse.belt;
+    delete state.dummy.reverse.attackElement;
+    state.dummy.reverse.dummyAcFactors = state.dummy.reverse.dummyAcFactors.filter((key) =>
+      reverseDummyAcFactors.some((factor) => factor.key === key),
+    );
+    state.dummy.reverse.dummyBuffFactors = state.dummy.reverse.dummyBuffFactors.filter((key) =>
+      reverseDummyBuffFactors.some((factor) => factor.key === key),
+    );
+    state.dummy.reverse.dummyAttackElement = normalizeElementName(state.dummy.reverse.dummyAttackElement);
+    state.dummy.reverse.targetAttackElement = normalizeElementName(state.dummy.reverse.targetAttackElement);
+    const options = reverseElementOptionsForSkill();
+    if (!options.includes(state.dummy.reverse.dummyAttackElement)) {
+      state.dummy.reverse.dummyAttackElement = defaults[sourceSkill].specs.elementAttack;
+    }
+    if (!options.includes(state.dummy.reverse.targetAttackElement)) {
+      state.dummy.reverse.targetAttackElement = defaults[sourceSkill].specs.elementAttack;
+    }
+    if (!state.dummy.reverse.dummyHotTimePercentInput) {
+      const oldHotTime = Number(state.dummy.reverse.dummyHotTime) || 0;
+      state.dummy.reverse.dummyHotTime = oldHotTime > 0 && oldHotTime <= 1 ? oldHotTime * 100 : oldHotTime;
+      state.dummy.reverse.dummyHotTimePercentInput = true;
+    }
+    state.dummy.reverse.dummyHotTime = Number(state.dummy.reverse.dummyHotTime) || 0;
+    state.dummy.reverse.dummySpirit = Number(state.dummy.reverse.dummySpirit) || 0;
+    state.dummy.reverse.targetHotTime = Number(state.dummy.reverse.targetHotTime) || 0;
+    state.dummy.reverse.targetSpirit = Number(state.dummy.reverse.targetSpirit) || 0;
+    state.dummy.coefficient = { ...defaultDummyState().coefficient, ...(state.dummy.coefficient || {}) };
+    state.dummy.coefficient.attackElement = normalizeElementName(state.dummy.coefficient.attackElement);
+    if (!coefficientElements.some((option) => option.value === state.dummy.coefficient.attackElement)) {
+      state.dummy.coefficient.attackElement = defaultDummyState().coefficient.attackElement;
+    }
+    if (!Array.isArray(state.dummy.coefficient.stats)) {
+      state.dummy.coefficient.stats = defaultDummyState().coefficient.stats;
+    }
+    state.dummy.coefficient.stats = state.dummy.coefficient.stats.filter((key) =>
+      coefficientStats.some((stat) => stat.key === key),
+    );
+    if (!Array.isArray(state.dummy.coefficient.dummyAcFactors)) {
+      state.dummy.coefficient.dummyAcFactors = ["rings"];
+    }
+    if (!Array.isArray(state.dummy.coefficient.dummyBuffFactors)) {
+      state.dummy.coefficient.dummyBuffFactors = reverseDummyBuffFactors.map((factor) => factor.key);
+    }
+    state.dummy.coefficient.dummyAcFactors = state.dummy.coefficient.dummyAcFactors.filter((key) =>
+      reverseDummyAcFactors.some((factor) => factor.key === key),
+    );
+    state.dummy.coefficient.dummyBuffFactors = state.dummy.coefficient.dummyBuffFactors.filter((key) =>
+      reverseDummyBuffFactors.some((factor) => factor.key === key),
+    );
+    if (!coefficientOperators.some((operator) => operator.key === state.dummy.coefficient.operator)) {
+      state.dummy.coefficient.operator = defaultDummyState().coefficient.operator;
+    }
+    state.dummy.coefficient.necklaceBonus = Number(state.dummy.coefficient.necklaceBonus) || 0;
+    state.dummy.coefficient.dummyHotTime = Number(state.dummy.coefficient.dummyHotTime) || 0;
+    state.dummy.coefficient.dummySpirit = Number(state.dummy.coefficient.dummySpirit) || 0;
+    state.dummy.coefficient.useAbility = Boolean(state.dummy.coefficient.useAbility);
+  }
+
+  function importDummySpecsFromSkill(skill) {
+    if (!skillKeys.includes(skill)) return;
+    const sourceSpecs = state[skill]?.specs || {};
+    const target = { ...defaultDummySpecs(), ...(state.dummy.specs || {}) };
+    const dummyKeys = dummyDefs.filter((def) => def.key).map((def) => def.key);
+    for (const key of dummyKeys) {
+      if (Object.prototype.hasOwnProperty.call(sourceSpecs, key)) {
+        target[key] = sourceSpecs[key];
+      }
+    }
+    target.elementAttack = normalizeElementName(target.elementAttack);
+    if (skill === "crasher" && sourceSpecs.focus === "On") {
+      target.focus = "On";
+    }
+    state.dummy.sourceSkill = skill;
+    state.dummy.specs = target;
+    state.dummy.specManual = { ...(state.dummy.specManual || {}) };
+    state.dummy.convManual = { ...(state.dummy.convManual || {}) };
+    for (const key of readonlyConversionKeysForSkill("dummy")) {
+      delete state.dummy.convManual[key];
+    }
+    if (!state.dummy.coefficient || typeof state.dummy.coefficient !== "object") {
+      state.dummy.coefficient = defaultDummyState().coefficient;
+    }
+    if (physicalSkillKeys.has(skill)) {
+      state.dummy.coefficient.necklaceBonus = Number(state[skill]?.convManual?.basePhysical) || 0;
+    }
+    normalizeDummyState();
+    saveState();
+    render();
   }
 
   function exportStateFile() {
@@ -515,6 +948,20 @@
     return value === "On" ? 1 : 0;
   }
 
+  function martialFocusValue(value) {
+    if (value === "업글") return 0.4;
+    if (value === "일반" || value === "On") return 0.3;
+    return 0;
+  }
+
+  function dummyFocusValue(value, sourceSkill = getDummySourceSkill()) {
+    if (value === "집중(전사)") return 1;
+    if (value === "변신마스터") return 0.3;
+    if (value === "정신집중(도가)") return 0.4;
+    if (value === "On") return sourceSkill === "crasher" ? 1 : 0.3;
+    return martialFocusValue(value);
+  }
+
   function hordeValue(value) {
     if (value === "나겔목") return 0.3;
     if (value === "호드목" || value === "On") return 0.15;
@@ -550,6 +997,20 @@
 
   function dashCoefficient(level) {
     return level === "업글" ? 57.8012585037289 : 3.724984600805496 * (Number(level) || 0);
+  }
+
+  function martialCoefficient(key, level, ability) {
+    if (key === "daraLevel") return 2;
+    if (key === "guyangLevel") return level === "업글" || level === "업글1" || level === "업글2" ? 0.42 : 0.4;
+    if (level === "업글" || level === "업글1" || level === "업글2") {
+      return (martialUpgradeCoefficients[key] ?? 0) * abilityCoefficient(ability, 0.00415);
+    }
+    const levelNumber = Number(level) || 0;
+    if (key === "dangakLevel") return (martialBaseCoefficients.dual + martialBaseCoefficients.combo) * levelNumber;
+    if (key === "punggakLevel") return (martialBaseCoefficients.scratch + martialBaseCoefficients.tail) * levelNumber;
+    if (key === "whirlwindLevel") return martialBaseCoefficients.wind * levelNumber;
+    if (key === "jiyeolLevel") return martialBaseCoefficients.jiyeol * levelNumber;
+    return 0;
   }
 
   function abilityCoefficient(ability, rate = 0.0041) {
@@ -750,6 +1211,160 @@
     return { conversions: c, rows: orderedRows, damageIncludes, factorSummary: buildFactorSummary(orderedRows, c, "crasher") };
   }
 
+  function calculateMartial(inputState = state.martial) {
+    const s = inputState.specs;
+    const c = {};
+    c.ability = applyManual(inputState, "ability", abilityCoefficient(s.ability));
+    c.flatPhysical = applyManual(inputState, "basePhysical", defaults.martial.conv.flatPhysical);
+    c.oneTick = Math.floor((Number(s.baseMagic) || 0) / 5);
+    c.str = Number(s.str) + 5;
+    c.con = Number(s.con) + 13;
+    c.ring1 = applyManual(inputState, "ring1", equipLevel(s.ring1, 1));
+    c.ring2 = applyManual(inputState, "ring2", equipLevel(s.ring2, 1));
+    c.weapon = applyManual(inputState, "weapon", equipLevel(s.weapon, 0.03));
+    c.acc1 = applyManual(inputState, "acc1", equipLevel(s.acc1, 0.01));
+    c.acc2 = applyManual(inputState, "acc2", equipLevel(s.acc2, 0.01));
+    c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
+    c.move = applyManual(inputState, "move", (Number(s.move) || 0) * 0.4);
+    for (const technique of martialTechniqueDefs) {
+      c[technique.key] = applyManual(inputState, technique.key, martialCoefficient(technique.key, s[technique.key], s.ability));
+    }
+    c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
+    c.arc = applyManual(inputState, "arc", (Number(s.arc) || 0) * 13);
+    c.abre = applyManual(inputState, "abre", (Number(s.abre) || 0) * 18);
+    c.ambush = applyManual(inputState, "ambush", s.ambush === "On" || Number(s.ambush) === 1 ? 20 : 0);
+    c.focus = applyManual(inputState, "focus", martialFocusValue(s.focus));
+    c.trap = applyManual(inputState, "trap", onValue(s.trap));
+    c.nar = applyManual(inputState, "nar", onValue(s.nar));
+    c.hotTime = applyManual(
+      inputState,
+      "hotTime",
+      s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
+    );
+    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
+    c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
+    c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
+    c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
+    const damageIncludes = normalizeMartialDamageIncludes(inputState.damageIncludes);
+
+    const monsterRows = [...crasherMonsterRows, ...normalizeCustomMonsters(inputState.customMonsters)];
+    const rows = monsterRows.map((monster) => {
+      const acChanged =
+        monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
+      const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
+      const buffWeight = buffWeightWithElement(c.elementAttack, c.move + c.focus + c.trap + c.nar);
+      const acWeight = defenseRate(acChanged);
+      const percent = acWeight * damageIncrease * buffWeight;
+      const hotTimeWeight = monster.kind !== "boss" ? 1 + c.hotTime : 1;
+      const skillBase =
+        acWeight *
+        damageIncrease *
+        buffWeight *
+        (Number(s.str) || 0) *
+        (Number(s.con) || 0) *
+        hotTimeWeight;
+      const spiritWeight = 1 + c.spirit;
+      const currentHp = Number(s.basePhysical) || 0;
+      const fullMana = Number(s.baseMagic) || 0;
+      const selectedMana = inputState.daraManaMode === "1틱" ? c.oneTick : fullMana;
+      const flatBonusElements = new Set(["생암", "생(암)공"]);
+      const flatBonus = flatBonusElements.has(normalizeElementName(s.elementAttack)) && monster.kind !== "boss" ? c.flatPhysical : 0;
+      const damages = martialTechniqueDefs.reduce((acc, technique) => {
+        if (technique.key === "daraLevel") {
+          acc[technique.damageKey] = (Math.max(0, currentHp + selectedMana - 1440) * c.daraLevel * percent * hotTimeWeight + flatBonus) * spiritWeight;
+        } else if (technique.key === "guyangLevel") {
+          acc[technique.damageKey] = (currentHp * c.guyangLevel * percent * hotTimeWeight + flatBonus) * spiritWeight;
+        } else {
+          acc[technique.damageKey] = (skillBase * c[technique.key] + flatBonus) * spiritWeight;
+        }
+        return acc;
+      }, {});
+      const totalDamage = martialDamageKeys.reduce(
+        (total, key) => total + (damageIncludes[key] ? damages[key] || 0 : 0),
+        0,
+      );
+      const total = monster.kind === "boss" ? Math.trunc(totalDamage) : null;
+      const balrogShot = monster.kind === "boss" ? 36000000 - total : null;
+      return {
+        ...monster,
+        acChanged,
+        acWeight,
+        damageIncrease,
+        buffWeight,
+        hotTimeWeight,
+        spiritWeight,
+        percent,
+        damages,
+        totalDamage,
+        total,
+        balrogShot,
+      };
+    });
+
+    const orderedRows = orderedRowsForSkill("martial", rows);
+    return { conversions: c, rows: orderedRows, damageIncludes, factorSummary: buildFactorSummary(orderedRows, c, "martial") };
+  }
+
+  function calculateDummy(inputState = state.dummy) {
+    const s = { ...defaultDummySpecs(), ...(inputState.specs || {}) };
+    if (!inputState.convManual) inputState.convManual = {};
+    const c = {};
+    c.ability = applyManual(inputState, "ability", abilityCoefficient(s.ability));
+    c.flatPhysical = 0;
+    c.oneTick = Math.floor((Number(s.baseMagic) || 0) / 5);
+    c.weaponMin = Number(s.weaponMin) || 0;
+    c.weaponMax = Number(s.weaponMax) || 0;
+    c.str = Number(s.str) || 0;
+    c.con = Number(s.con) || 0;
+    c.dex = Number(s.dex) || 0;
+    c.int = Number(s.int) || 0;
+    c.damage = Number(s.damage) || 0;
+    c.ring1 = applyManual(inputState, "ring1", equipLevel(s.ring1, 1));
+    c.ring2 = applyManual(inputState, "ring2", equipLevel(s.ring2, 1));
+    c.weapon = applyManual(inputState, "weapon", equipLevel(s.weapon, 0.03));
+    c.acc1 = applyManual(inputState, "acc1", equipLevel(s.acc1, 0.01));
+    c.acc2 = applyManual(inputState, "acc2", equipLevel(s.acc2, 0.01));
+    c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
+    c.move = applyManual(inputState, "move", (Number(s.move) || 0) * 0.4);
+    c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
+    c.arc = applyManual(inputState, "arc", (Number(s.arc) || 0) * 13);
+    c.abre = applyManual(inputState, "abre", (Number(s.abre) || 0) * 18);
+    c.ambush = applyManual(inputState, "ambush", s.ambush === "On" || Number(s.ambush) === 1 ? 20 : 0);
+    c.focus = applyManual(inputState, "focus", dummyFocusValue(s.focus, inputState.sourceSkill || getDummySourceSkill()));
+    c.trap = applyManual(inputState, "trap", onValue(s.trap));
+    c.nar = applyManual(inputState, "nar", onValue(s.nar));
+    c.hotTime = applyManual(
+      inputState,
+      "hotTime",
+      s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
+    );
+    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
+    c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
+    c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
+    c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
+
+    const acChanged = 100 + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
+    const acWeight = defenseRate(acChanged);
+    const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
+    const buffWeight = buffWeightWithElement(c.elementAttack, c.move + c.focus + c.trap + c.nar);
+    const hotTimeWeight = 1 + c.hotTime;
+    const spiritWeight = 1 + c.spirit;
+    const percent = acWeight * damageIncrease * buffWeight * hotTimeWeight * spiritWeight;
+    const row = {
+      section: "허수아비",
+      name: "허수아비 입력값",
+      ac: 100,
+      acChanged,
+      acWeight,
+      damageIncrease,
+      buffWeight,
+      hotTimeWeight,
+      spiritWeight,
+      percent,
+    };
+    return { conversions: c, specs: s, rows: [row], factorSummary: buildFactorSummary([row], c, "dummy") };
+  }
+
   function crasherElementValue(name, c) {
     const table = {
       숲철공: 1.35,
@@ -864,7 +1479,7 @@
         ? ["반지1", "반지2", "저주", "아크", "아브", "기습"]
         : ["반지1", "반지2", "저주", "아크", "아브", "기습"];
     const buffFactors =
-      skill === "crasher" ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"] : ["속강", "속성(공방)", "트랩", "나르", "이펙트", "호드/나겔목"];
+      physicalSkillKeys.has(skill) ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"] : ["속강", "속성(공방)", "트랩", "나르", "이펙트", "호드/나겔목"];
     return [
       {
         key: "ac",
@@ -928,7 +1543,15 @@
   }
 
   function getCurrentResult() {
-    return state.skill === "crasher" ? calculateCrasher(state.crasher) : calculateMeteor(state.meteor);
+    if (state.skill === "dummy") return calculateDummy(state.dummy);
+    return calculateResultForSkill(state.skill);
+  }
+
+  function calculateResultForSkill(skill) {
+    if (skill === "crasher") return calculateCrasher(state.crasher);
+    if (skill === "martial") return calculateMartial(state.martial);
+    if (skill === "dummy") return calculateDummy(state.dummy);
+    return calculateMeteor(state.meteor);
   }
 
   function clearMeteorDerivedManuals(key) {
@@ -939,25 +1562,33 @@
   }
 
   function clearCrasherSkillConversionManuals(key) {
-    if (state.skill !== "crasher") return;
+    if (!physicalSkillKeys.has(state.skill)) return;
+    const skillState = getCurrentSkillState();
     if (["madType", "furyLevel", "dashLevel", "downFourWayLevel"].includes(key)) {
-      delete state.crasher.convManual[key];
+      delete skillState.convManual[key];
+    }
+    if (martialTechniqueDefs.some((technique) => technique.key === key)) {
+      delete skillState.convManual[key];
     }
     if (key === "jobType") {
-      delete state.crasher.convManual.madType;
+      delete skillState.convManual.madType;
     }
   }
 
   function getCurrentDefs() {
-    return state.skill === "crasher" ? crasherDefs : meteorDefs;
+    if (state.skill === "crasher") return crasherDefs;
+    if (state.skill === "martial") return martialDefs;
+    if (state.skill === "dummy") return dummyDefs;
+    return meteorDefs;
   }
 
   function getCurrentSkillState() {
+    if (state.skill === "dummy") return state.dummy;
     return state[state.skill];
   }
 
   function elementOptionsForSkill(skill) {
-    return skill === "crasher" ? crasherElements : meteorElements;
+    return physicalSkillKeys.has(skill) ? crasherElements : meteorElements;
   }
 
   function reverseElementOptionsForSkill() {
@@ -965,19 +1596,19 @@
   }
 
   function elementValueForSkill(skill, name, conversions) {
-    return skill === "crasher" ? crasherElementValue(name, conversions) : meteorElementValue(name, conversions);
+    return physicalSkillKeys.has(skill) ? crasherElementValue(name, conversions) : meteorElementValue(name, conversions);
   }
 
-  function calculateReverseDamage(result) {
-    const skillState = getCurrentSkillState();
-    if (!skillState.reverse) skillState.reverse = defaultReverseState(state.skill);
-    const reverse = skillState.reverse;
+  function calculateReverseDamage(result, sourceSkill = state.skill, reverseOverride = null) {
+    const skillState = state.skill === "dummy" ? state.dummy : state[sourceSkill];
+    const reverse = reverseOverride || skillState.reverse || defaultReverseState(sourceSkill);
     const options = reverseElementOptionsForSkill();
+    const defaultElement = skillState.specs?.elementAttack || defaults[sourceSkill].specs.elementAttack;
     if (!options.includes(reverse.dummyAttackElement)) {
-      reverse.dummyAttackElement = skillState.specs.elementAttack;
+      reverse.dummyAttackElement = defaultElement;
     }
     if (!options.includes(reverse.targetAttackElement)) {
-      reverse.targetAttackElement = skillState.specs.elementAttack;
+      reverse.targetAttackElement = defaultElement;
     }
 
     const dummyDamage = Number(reverse.dummyDamage) || 0;
@@ -993,8 +1624,8 @@
       ...result.conversions,
       elementBoost: selectedTargetBuffs.has("속강") ? 1 : 0,
     };
-    const dummyElementValue = elementValueForSkill(state.skill, reverse.dummyAttackElement, dummyConversions);
-    const targetElementValue = elementValueForSkill(state.skill, reverse.targetAttackElement, targetConversions);
+    const dummyElementValue = elementValueForSkill(sourceSkill, reverse.dummyAttackElement, dummyConversions);
+    const targetElementValue = elementValueForSkill(sourceSkill, reverse.targetAttackElement, targetConversions);
     const targetElementBuffWeight = targetElementValue >= 1 ? targetElementValue : 0;
     const targetElementDebuffValue = targetElementValue <= 1 && targetElementValue > 0 ? targetElementValue : 0;
     const damageIncrease = result.rows[0]?.damageIncrease ?? 1;
@@ -1016,9 +1647,10 @@
     const dummySpiritWeight = 1 + (Number(reverse.dummySpirit) || 0) / 100;
     const originalDivider = dummyAcWeight * damageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
     const baseBuffWeight = targetElementBuffWeight || 1;
+    const targetFocusWeight = state.skill === "dummy" || sourceSkill === "martial" ? result.conversions.focus || 0 : 1;
     const selectedBuffWeight =
       baseBuffWeight +
-      (selectedTargetBuffs.has("집중") ? 1 : 0) +
+      (selectedTargetBuffs.has("집중") ? targetFocusWeight : 0) +
       (selectedTargetBuffs.has("나르") ? 1 : 0) +
       (selectedTargetBuffs.has("트랩") ? 1 : 0);
     const debuffTotal = reverseDebuffTotal(reverse.debuffs, targetAc, targetElementDebuffValue);
@@ -1105,21 +1737,36 @@
     if (key === "furyLevel") return map.furyLevel;
     if (key === "dashLevel") return map.dashLevel;
     if (key === "downFourWayLevel") return map.downFourWayLevel;
+    if (martialTechniqueDefs.some((technique) => technique.key === key)) return map[key];
+    if (state.skill === "dummy" && ["basePhysical", "weaponMin", "weaponMax", "str", "con", "dex", "int", "damage"].includes(key)) {
+      return "";
+    }
     if (key === "basePhysical") return map.flatPhysical;
-    if (key === "baseMagic") return state.skill === "meteor" ? result.specs.oneTick : "";
+    if (key === "baseMagic") {
+      if (state.skill === "meteor") return result.specs.oneTick;
+      if (state.skill === "martial" || state.skill === "dummy") return map.oneTick;
+      return "";
+    }
     if (key === "meditation" && state.skill === "meteor") return map.oneTick;
     if (key === "str" || key === "con") return "";
     return map[key] ?? "";
   }
 
   function editableConversionKeysForSkill(skill) {
-    return skill === "crasher"
-      ? new Set(["basePhysical", "madType", "furyLevel", "dashLevel", "downFourWayLevel", "hotTime"])
-      : new Set(["meditation", "hotTime"]);
+    if (skill === "crasher") {
+      return new Set(["basePhysical", "madType", "furyLevel", "dashLevel", "downFourWayLevel", "hotTime"]);
+    }
+    if (skill === "martial") {
+      return new Set(["basePhysical", ...martialInputTechniqueDefs.map((technique) => technique.key), "hotTime"]);
+    }
+    if (skill === "dummy") {
+      return new Set(["hotTime"]);
+    }
+    return new Set(["meditation", "hotTime"]);
   }
 
   function readonlyConversionKeysForSkill(skill) {
-    const defs = skill === "crasher" ? crasherDefs : meteorDefs;
+    const defs = skill === "crasher" ? crasherDefs : skill === "martial" ? martialDefs : skill === "dummy" ? dummyDefs : meteorDefs;
     const editable = editableConversionKeysForSkill(skill);
     return defs
       .filter((def) => def.key && !editable.has(def.key))
@@ -1131,13 +1778,14 @@
   }
 
   function formatConversionInputValue(key, value) {
-    if (key === "dashLevel") return formatDecimalInputValue(value, 2);
+    if (key === "dashLevel" || martialTechniqueDefs.some((technique) => technique.key === key)) return formatDecimalInputValue(value, 2);
     return formatDecimalInputValue(value, 4);
   }
 
   function conversionSuffix(key) {
-    if (state.skill === "crasher" && key === "basePhysical") return "추뎀";
-    if (state.skill === "meteor" && (key === "baseMagic" || key === "meditation")) return "1틱";
+    if (physicalSkillKeys.has(state.skill) && key === "basePhysical") return "추뎀";
+    if ((state.skill === "meteor" || state.skill === "martial" || state.skill === "dummy") && key === "baseMagic") return "1틱";
+    if (state.skill === "meteor" && key === "meditation") return "1틱";
     return "";
   }
 
@@ -1149,15 +1797,24 @@
   }
 
   function render() {
+    normalizeDummyState();
     const skillState = getCurrentSkillState();
     const result = getCurrentResult();
-    const specs = state.skill === "meteor" ? result.specs : skillState.specs;
-    document.getElementById("inputMode").textContent = state.skill === "crasher" ? "크래셔" : "메테오";
-    document.getElementById("resultMode").textContent = state.skill === "crasher" ? "크래셔" : "메테오";
-    renderInputs(specs, result);
-    renderResults(result);
-    renderSummary(result);
-    renderReverseCalculator(result);
+    document.getElementById("inputMode").textContent = skillLabels[state.skill];
+    document.getElementById("resultMode").textContent = skillLabels[state.skill];
+    document.querySelector(".result-heading h2").textContent = state.skill === "dummy" ? "계산 도구" : "데미지 계산";
+    document.querySelector(".workspace").classList.toggle("dummy-workspace", state.skill === "dummy");
+    document.querySelector(".input-panel").hidden = false;
+    if (state.skill === "dummy") {
+      renderInputs(state.dummy.specs, result);
+      renderDummyTools(result);
+    } else {
+      const specs = state.skill === "meteor" ? result.specs : skillState.specs;
+      renderInputs(specs, result);
+      renderResults(result);
+      renderSummary(result);
+      document.getElementById("reversePanel").innerHTML = "";
+    }
     renderMonsterSectionOptions();
     document.querySelectorAll(".skill-tab").forEach((button) => {
       const active = button.dataset.skill === state.skill;
@@ -1168,7 +1825,7 @@
 
   function renderMonsterSectionOptions() {
     const options = new Set(["백유", "나겔링", "연습장"]);
-    for (const skill of ["crasher", "meteor"]) {
+    for (const skill of skillKeys) {
       for (const monster of state[skill].customMonsters || []) {
         if (monster.section) options.add(monster.section);
       }
@@ -1239,6 +1896,9 @@
 
   function renderInputs(specs, result) {
     const rows = [];
+    if (state.skill === "dummy") {
+      rows.push(`<tr class="dummy-import-row"><td colspan="3">${renderDummyImportBar()}</td></tr>`);
+    }
     for (const def of getCurrentDefs()) {
       if (def.section) {
         rows.push(`<tr class="section-row"><td colspan="3">${def.section}</td></tr>`);
@@ -1251,6 +1911,15 @@
       }
     }
     document.getElementById("inputRows").innerHTML = rows.join("");
+  }
+
+  function renderDummyImportBar() {
+    return `<div class="dummy-import-bar" aria-label="다른 탭 입력값 불러오기">
+      <span>입력값 불러오기</span>
+      ${skillKeys
+        .map((skill) => `<button class="dummy-import-button" type="button" data-dummy-import="${skill}">${skillLabels[skill]}</button>`)
+        .join("")}
+    </div>`;
   }
 
   function renderInputRow(def, specs, result) {
@@ -1299,6 +1968,7 @@
     const suffixes = {
       manaReduction: "%",
       spirit: "%",
+      damage: "%",
     };
     return suffixes[key] || "";
   }
@@ -1379,6 +2049,9 @@
         colWidths: hideJobSkill
           ? [7.2, 5.8, 6.0, 6.4, 6.8, 7.0, 4.8, 6.2, 8.0, 8.0, 8.0, 8.0, 8.2, 9.6]
           : [6.6, 5.4, 5.6, 6.0, 6.4, 6.6, 4.4, 5.8, 7.4, 7.4, 7.4, 7.4, 7.2, 7.6, 8.8],
+        colKinds: hideJobSkill
+          ? ["", "", "", "", "", "", "", "", "damage", "damage", "damage", "damage", "damage", ""]
+          : ["", "", "", "", "", "", "", "", "damage", "damage", "damage", "damage", "damage", "damage", ""],
         headers,
         rowRenderer: (row) => {
           const note =
@@ -1417,9 +2090,72 @@
       return;
     }
 
+    if (state.skill === "martial") {
+      const damageIncludes = result.damageIncludes || normalizeMartialDamageIncludes(state.martial.damageIncludes);
+      const headers = [
+        "몬스터",
+        "기존 AC",
+        "AC변화",
+        "AC가중치",
+        "데미지증가",
+        "버프가중치",
+        "핫타임",
+        "퍼센트",
+        ...martialTechniqueDefs.map((technique) =>
+          technique.damageKey === "dara"
+            ? renderDaraDamageHeader(damageIncludes)
+            : renderCrasherDamageHeader(technique.damageKey, technique.label, damageIncludes),
+        ),
+        "합계",
+        "비고",
+      ];
+      container.innerHTML = renderGroupedTables(result.rows, {
+        tableClass: "martial-result",
+        colWidths: [6.4, 5.2, 5.4, 5.8, 6.2, 6.4, 4.2, 5.6, 6.7, 6.7, 6.7, 6.7, 6.7, 6.7, 7.2, 7.4],
+        colKinds: ["", "", "", "", "", "", "", "", "damage", "damage", "damage", "damage", "damage", "damage", "damage", ""],
+        headers,
+        rowRenderer: (row) => {
+          const note =
+            row.custom && row.hp
+              ? shotNote(row.totalDamage, row.hp)
+              : row.kind === "boss"
+              ? row.balrogShot > 0
+                ? `<span class="damage-warn">${formatNumber(row.balrogShot)} 남음</span>`
+                : `<span class="damage-note">발록 샷</span>`
+              : "";
+          const deleteButton = row.custom ? `<button class="delete-monster" type="button" data-monster-id="${row.id}">삭제</button>` : "";
+          const damageCells = martialTechniqueDefs
+            .map(
+              (technique) =>
+                `<td data-label="${technique.label}" class="damage-strong">${formatIncludedCrasherDamage(
+                  row,
+                  row.damages[technique.damageKey],
+                  damageIncludes[technique.damageKey],
+                )}</td>`,
+            )
+            .join("");
+          return `<tr>
+            <td data-label="몬스터">${row.name}${deleteButton}</td>
+            <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
+            <td data-label="AC변화" class="factor-ac">${formatNumber(row.acChanged, 2)}</td>
+            <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 4)}</td>
+            <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 4)}</td>
+            <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 4)}</td>
+            <td data-label="핫타임" class="factor-hot">${formatHotTimeWeight(row.hotTimeWeight)}</td>
+            <td data-label="퍼센트">${formatNumber(row.percent, 4)}</td>
+            ${damageCells}
+            <td data-label="합계" class="damage-total">${formatNumber(row.totalDamage)}</td>
+            <td data-label="비고">${note}</td>
+          </tr>`;
+        },
+      });
+      return;
+    }
+
     container.innerHTML = renderGroupedTables(result.rows, {
       tableClass: "meteor-result",
       colWidths: [8.8, 5.8, 6.0, 6.5, 6.8, 7.0, 4.8, 6.2, 12.0, 12.0, 12.0, 12.1],
+      colKinds: ["", "", "", "", "", "", "", "", "damage", "damage", "damage", "damage"],
       headerHtml: `<tr>
         <th rowspan="2">몬스터</th>
         <th rowspan="2">기존 AC</th>
@@ -1432,10 +2168,10 @@
         <th class="merged-meteor-head" colspan="4">메테오</th>
       </tr>
       <tr>
-        <th>1틱+1메디</th>
-        <th>2틱+1메디</th>
-        <th>2틱+2메디</th>
-        <th>풀마</th>
+        <th class="col-damage">1틱+1메디</th>
+        <th class="col-damage">2틱+1메디</th>
+        <th class="col-damage">2틱+2메디</th>
+        <th class="col-damage">풀마</th>
       </tr>`,
       rowRenderer: (row) => {
         return `<tr>
@@ -1472,6 +2208,24 @@
       <input class="crasher-damage-check" type="checkbox" data-crasher-damage-include="${key}" ${checked} aria-label="${label} 합계 포함">
       <span>${label}</span>
     </label>`;
+  }
+
+  function renderDaraDamageHeader(damageIncludes) {
+    const current = martialDaraManaModes.includes(state.martial.daraManaMode)
+      ? state.martial.daraManaMode
+      : defaults.martial.daraManaMode;
+    const manaOptions = martialDaraManaModes
+      .map((value) => `<option value="${value}" ${value === current ? "selected" : ""}>${value}</option>`)
+      .join("");
+    return `<span class="dash-stack-head dash-stack-head-checked">
+      <input class="crasher-damage-check" type="checkbox" data-crasher-damage-include="dara" ${damageIncludes?.dara !== false ? "checked" : ""} aria-label="다라 합계 포함">
+      <span class="dash-stack-control">
+        <span>다라</span>
+        <span class="dara-mana-select-wrap">
+          <select class="dara-mana-select" data-dara-mana-mode aria-label="다라 마나 기준">${manaOptions}</select>
+        </span>
+      </span>
+    </span>`;
   }
 
   function formatMeteorDamage(row, value) {
@@ -1549,8 +2303,24 @@
             </button>
           </div>
           <table class="result-table ${config.tableClass} font-scale-${resultFontScale}"${collapsed ? " hidden" : ""}>
-            ${config.colWidths ? `<colgroup>${config.colWidths.map((width) => `<col style="width: ${width}%">`).join("")}</colgroup>` : ""}
-            <thead>${config.headerHtml || `<tr>${config.headers.map((header) => `<th>${header}</th>`).join("")}</tr>`}</thead>
+            ${
+              config.colWidths
+                ? `<colgroup>${config.colWidths
+                    .map((width, index) => {
+                      const kind = config.colKinds?.[index] || "";
+                      const className = kind ? ` class="col-${kind}"` : "";
+                      const style = kind === "damage" ? "" : ` style="width: ${width}%"`;
+                      return `<col${className}${style}>`;
+                    })
+                    .join("")}</colgroup>`
+                : ""
+            }
+            <thead>${
+              config.headerHtml ||
+              `<tr>${config.headers
+                .map((header, index) => `<th${config.colKinds?.[index] ? ` class="col-${config.colKinds[index]}"` : ""}>${header}</th>`)
+                .join("")}</tr>`
+            }</thead>
             <tbody>${sectionRows.map(config.rowRenderer).join("")}</tbody>
           </table>
         </section>`;
@@ -1582,32 +2352,241 @@
       .join("");
   }
 
-  function renderReverseCalculator(result) {
-    const skillState = getCurrentSkillState();
-    const reverse = skillState.reverse || defaultReverseState(state.skill);
-    const calculation = calculateReverseDamage(result);
+  function renderDummyTools(result) {
+    document.querySelector(".result-table-wrap").innerHTML = `
+      <div class="dummy-tools" id="dummyToolSurface">
+        <div id="dummyReverseSurface"></div>
+      </div>`;
+    document.getElementById("summaryStrip").innerHTML = "";
+    document.getElementById("reversePanel").innerHTML = "";
+    renderReverseCalculator(result, "dummyReverseSurface");
+  }
+
+  function coefficientStatBase(coefficient) {
+    const specs = state.dummy.specs || defaultDummySpecs();
+    const selectedStats = Array.isArray(coefficient.stats) ? coefficient.stats : [];
+    const values = selectedStats.map((key) => Number(specs[key]) || 0);
+    if (!values.length) return 0;
+    if (coefficient.operator === "sum") {
+      return values.reduce((total, value) => total + value, 0);
+    }
+    return values.reduce((total, value) => total * value, 1);
+  }
+
+  function calculateCoefficientEstimate(result, sourceSkill) {
+    const coefficient = state.dummy.coefficient || defaultDummyState().coefficient;
+    const damage = Number(coefficient.damage) || 0;
+    const necklaceBonus = Number(coefficient.necklaceBonus) || 0;
+    const adjustedDamage = Math.max(0, damage - necklaceBonus);
+    const reverse = {
+      ...state.dummy.reverse,
+      dummyDamage: adjustedDamage,
+      dummyAttackElement: coefficient.attackElement,
+      dummyAcFactors: coefficient.dummyAcFactors,
+      dummyBuffFactors: coefficient.dummyBuffFactors,
+      dummyHotTime: coefficient.dummyHotTime,
+      dummySpirit: coefficient.dummySpirit,
+    };
+    const calculation = calculateReverseDamage(result, sourceSkill, reverse);
+    const statBase = coefficientStatBase(coefficient);
+    const abilityWeight = coefficient.useAbility ? result.conversions.ability || 1 : 1;
+    const denominator = statBase * abilityWeight;
+    return {
+      ...calculation,
+      statBase,
+      abilityWeight,
+      necklaceBonus,
+      adjustedDamage,
+      denominator,
+      coefficient: denominator ? calculation.originalDamage / denominator : 0,
+    };
+  }
+
+  function renderCoefficientEstimator(result, sourceSkill) {
+    const coefficient = state.dummy.coefficient || defaultDummyState().coefficient;
+    const estimate = calculateCoefficientEstimate(result, sourceSkill);
+    const selectedStats = new Set(coefficient.stats || []);
+    const selectedCoefficientAcFactors = new Set(coefficient.dummyAcFactors || []);
+    const selectedCoefficientBuffFactors = new Set(coefficient.dummyBuffFactors || []);
+    const collapsed = Boolean(state.dummy.collapsedCards?.coefficient);
+    return `<section class="reverse-card estimate-card">
+      <div class="reverse-heading">
+        <div>
+          <p class="eyebrow">Skill Coefficient</p>
+          <h2>기술 계수 측정</h2>
+        </div>
+        <div class="reverse-heading-actions">
+          <div class="reverse-output-group">
+            <div class="reverse-output">
+              <span>원 데미지</span>
+              <strong>${formatNumber(estimate.originalDamage)}</strong>
+            </div>
+          </div>
+          <button class="card-toggle-button" type="button" data-dummy-card-toggle="coefficient" aria-expanded="${!collapsed}">
+            ${collapsed ? "펼치기" : "접기"}
+          </button>
+        </div>
+      </div>
+      <div class="coefficient-layout" ${collapsed ? "hidden" : ""}>
+        <section class="coefficient-group coefficient-input-group">
+          <h3>측정값</h3>
+          <div class="reverse-grid coefficient-field-grid">
+            <label class="reverse-field">
+              <span>허수아비가 입은 데미지</span>
+              <input class="field-control" data-estimate-key="damage" type="number" step="any" value="${formatInputValue(coefficient.damage)}" />
+            </label>
+            <label class="reverse-field">
+              <span>목걸이추뎀</span>
+              <input class="field-control" data-estimate-key="necklaceBonus" type="number" step="any" value="${formatInputValue(coefficient.necklaceBonus)}" />
+            </label>
+            <label class="reverse-field">
+              <span>속성</span>
+              <select class="field-control" data-estimate-key="attackElement">
+                ${coefficientElements
+                  .map(
+                    (option) =>
+                      `<option value="${option.value}" ${String(coefficient.attackElement) === String(option.value) ? "selected" : ""}>${option.label}</option>`,
+                  )
+                  .join("")}
+              </select>
+            </label>
+          </div>
+        </section>
+        <section class="coefficient-group coefficient-stat-group">
+          <h3>스탯 조건</h3>
+          <div class="coefficient-check-layout">
+            <fieldset class="reverse-check-group coefficient-check-group">
+              <legend>반영 스탯</legend>
+              ${coefficientStats
+                .map(
+                  (stat) => `<label class="reverse-check">
+                    <input type="checkbox" data-estimate-stat="${stat.key}" ${selectedStats.has(stat.key) ? "checked" : ""} />
+                    <span>${stat.label}</span>
+                  </label>`,
+                )
+                .join("")}
+            </fieldset>
+            <fieldset class="reverse-check-group coefficient-check-group">
+              <legend>스탯 관계</legend>
+              ${coefficientOperators
+                .map(
+                  (operator) => `<label class="reverse-check">
+                    <input type="radio" name="coefficientOperator" data-estimate-operator="${operator.key}" ${coefficient.operator === operator.key ? "checked" : ""} />
+                    <span>${operator.label}</span>
+                  </label>`,
+                )
+                .join("")}
+            </fieldset>
+          </div>
+        </section>
+        <section class="coefficient-group coefficient-weight-group">
+          <h3>가중치</h3>
+          <div class="coefficient-weight-layout">
+            <fieldset class="reverse-check-group coefficient-check-group coefficient-ability-group">
+              <legend>어빌</legend>
+              <label class="reverse-check">
+                <input type="checkbox" data-estimate-ability ${coefficient.useAbility ? "checked" : ""} />
+                <span>어빌가중치 적용</span>
+              </label>
+            </fieldset>
+            <fieldset class="reverse-check-group coefficient-check-group">
+              <legend>AC가중치 적용</legend>
+              ${reverseDummyAcFactors
+                .map(
+                  (factor) => `<label class="reverse-check">
+                    <input type="checkbox" data-estimate-dummy-ac="${factor.key}" ${selectedCoefficientAcFactors.has(factor.key) ? "checked" : ""} />
+                    <span>${factor.label}</span>
+                  </label>`,
+                )
+                .join("")}
+            </fieldset>
+            <fieldset class="reverse-check-group coefficient-check-group">
+              <legend>버프가중치 적용</legend>
+              ${reverseDummyBuffFactors
+                .map(
+                  (factor) => `<label class="reverse-check">
+                    <input type="checkbox" data-estimate-dummy-buff="${factor.key}" ${selectedCoefficientBuffFactors.has(factor.key) ? "checked" : ""} />
+                    <span>${factor.label}</span>
+                  </label>`,
+                )
+                .join("")}
+            </fieldset>
+            <fieldset class="reverse-check-group coefficient-check-group">
+              <legend>기타</legend>
+              <div class="reverse-grid coefficient-field-grid">
+                <label class="reverse-field">
+                  <span>핫타임(%)</span>
+                  <input class="field-control" data-estimate-key="dummyHotTime" type="number" step="any" value="${formatInputValue(coefficient.dummyHotTime)}" />
+                </label>
+                <label class="reverse-field">
+                  <span>정령 %</span>
+                  <input class="field-control" data-estimate-key="dummySpirit" type="number" step="any" value="${formatInputValue(coefficient.dummySpirit)}" />
+                </label>
+              </div>
+            </fieldset>
+          </div>
+        </section>
+        <section class="coefficient-group coefficient-output-group">
+          <h3>계산 결과</h3>
+          <div class="coefficient-output-grid">
+            <div class="reverse-output coefficient-output">
+              <span>보정 데미지</span>
+              <strong>${formatNumber(estimate.adjustedDamage)}</strong>
+            </div>
+            <div class="reverse-output coefficient-output">
+              <span>스탯 연산값</span>
+              <strong>${formatNumber(estimate.statBase, 4)}</strong>
+            </div>
+            <div class="reverse-output coefficient-output">
+              <span>어빌가중치</span>
+              <strong>${coefficient.useAbility ? formatNumber(estimate.abilityWeight, 4) : "-"}</strong>
+            </div>
+            <div class="reverse-output coefficient-output coefficient-result">
+              <span>추정 계수</span>
+              <strong>${estimate.denominator ? formatNumber(estimate.coefficient, 6) : "-"}</strong>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>`;
+  }
+
+  function renderReverseCalculator(result, targetId = "reversePanel") {
+    const target = document.getElementById(targetId);
+    if (!target) return;
+    const sourceSkill = "martial";
+    const reverse = state.dummy.reverse || defaultReverseState(sourceSkill);
+    const calculation = calculateReverseDamage(result, sourceSkill, reverse);
     const elementOptions = reverseElementOptionsForSkill();
     const selectedBuffs = new Set(reverse.buffs || []);
     const selectedDebuffs = new Set(reverse.debuffs || []);
     const selectedDummyAcFactors = new Set(reverse.dummyAcFactors || []);
     const selectedDummyBuffFactors = new Set(reverse.dummyBuffFactors || []);
-    document.getElementById("reversePanel").innerHTML = `
+    const collapsed = Boolean(state.dummy.collapsedCards?.reverse);
+    target.innerHTML = `
+      <section class="reverse-card">
       <div class="reverse-heading">
         <div>
           <p class="eyebrow">Dummy Reverse</p>
           <h2>허수아비 역산</h2>
         </div>
-        <div class="reverse-output-group">
-          <div class="reverse-output">
-            <span>원 데미지</span>
-            <strong>${formatNumber(calculation.originalDamage)}</strong>
+        <div class="reverse-heading-actions">
+          <div class="reverse-output-group">
+            <div class="reverse-output">
+              <span>원 데미지</span>
+              <strong>${formatNumber(calculation.originalDamage)}</strong>
+            </div>
+            <div class="reverse-output">
+              <span>계산된 데미지</span>
+              <strong>${formatNumber(calculation.damage)}</strong>
+            </div>
           </div>
-          <div class="reverse-output">
-            <span>계산된 데미지</span>
-            <strong>${formatNumber(calculation.damage)}</strong>
-          </div>
+          <button class="card-toggle-button" type="button" data-dummy-card-toggle="reverse" aria-expanded="${!collapsed}">
+            ${collapsed ? "펼치기" : "접기"}
+          </button>
         </div>
       </div>
+      <div class="dummy-card-body" ${collapsed ? "hidden" : ""}>
       <div class="reverse-metrics">
         <div class="reverse-metric factor-ac">
           <span>허수 AC가중치</span>
@@ -1641,7 +2620,7 @@
       <div class="reverse-condition-layout">
         <section class="reverse-condition-group">
           <h3>허수아비 타격 조건</h3>
-          <p>장비는 왼쪽 입력란의 장비 값을 사용합니다.</p>
+          <p>스펙과 장비는 허수아비 입력값을 사용합니다.</p>
           <div class="reverse-grid reverse-grid-dummy-inputs">
             <label class="reverse-field">
               <span>허수아비 데미지</span>
@@ -1736,7 +2715,10 @@
             </fieldset>
           </div>
         </section>
-      </div>`;
+      </div>
+      </div>
+      </section>`;
+    target.insertAdjacentHTML("beforeend", renderCoefficientEstimator(result, sourceSkill));
   }
 
   function renderBaekyuInfoDialog() {
@@ -1876,6 +2858,16 @@
     });
 
     document.querySelector(".result-table-wrap").addEventListener("click", (event) => {
+      const dummyCardToggle = event.target.closest("[data-dummy-card-toggle]");
+      if (dummyCardToggle) {
+        toggleDummyCard(dummyCardToggle.dataset.dummyCardToggle);
+        return;
+      }
+      const dummyImport = event.target.closest("[data-dummy-import]");
+      if (dummyImport) {
+        importDummySpecsFromSkill(dummyImport.dataset.dummyImport);
+        return;
+      }
       const sectionToggle = event.target.closest("[data-section-toggle]");
       if (sectionToggle) {
         toggleSectionCollapse(decodeURIComponent(sectionToggle.dataset.sectionToggle || ""));
@@ -1911,14 +2903,32 @@
     document.querySelector(".result-table-wrap").addEventListener("change", (event) => {
       const damageInclude = event.target.closest("[data-crasher-damage-include]");
       if (damageInclude) {
-        state.crasher.damageIncludes = normalizeCrasherDamageIncludes(state.crasher.damageIncludes);
-        state.crasher.damageIncludes[damageInclude.dataset.crasherDamageInclude] = damageInclude.checked;
+        const skillState = getCurrentSkillState();
+        if (state.skill === "crasher") {
+          skillState.damageIncludes = normalizeCrasherDamageIncludes(skillState.damageIncludes);
+        } else if (state.skill === "martial") {
+          skillState.damageIncludes = normalizeMartialDamageIncludes(skillState.damageIncludes);
+        } else {
+          return;
+        }
+        skillState.damageIncludes[damageInclude.dataset.crasherDamageInclude] = damageInclude.checked;
+        saveState();
+        render();
+        return;
+      }
+      const daraManaMode = event.target.closest("[data-dara-mana-mode]");
+      if (daraManaMode) {
+        if (state.skill !== "martial") return;
+        state.martial.daraManaMode = martialDaraManaModes.includes(daraManaMode.value)
+          ? daraManaMode.value
+          : defaults.martial.daraManaMode;
         saveState();
         render();
         return;
       }
       const select = event.target.closest("[data-dash-stack]");
       if (!select) return;
+      if (state.skill !== "crasher") return;
       state.crasher.dashStacks = clampInt(select.value, 1, 6, 1);
       saveState();
       render();
@@ -1931,6 +2941,11 @@
     });
 
     document.getElementById("inputRows").addEventListener("click", (event) => {
+      const dummyImport = event.target.closest("[data-dummy-import]");
+      if (dummyImport) {
+        importDummySpecsFromSkill(dummyImport.dataset.dummyImport);
+        return;
+      }
       if (!event.target.closest("[data-open-down-fourway]")) return;
       renderDownFourWayDialog();
       document.getElementById("downFourWayDialog").showModal();
@@ -1952,13 +2967,48 @@
       input.blur();
     });
 
-    document.getElementById("reversePanel").addEventListener("input", (event) => {
+    document.querySelector(".result-panel").addEventListener("input", (event) => {
+      const estimateInput = event.target.closest("[data-estimate-key]");
+      if (estimateInput) {
+        saveCoefficientEstimateFieldOnly(estimateInput);
+        return;
+      }
       const input = event.target.closest("[data-reverse-key]");
       if (!input) return;
       saveReverseFieldOnly(input);
     });
 
-    document.getElementById("reversePanel").addEventListener("change", (event) => {
+    document.querySelector(".result-panel").addEventListener("change", (event) => {
+      const estimateInput = event.target.closest("[data-estimate-key]");
+      if (estimateInput) {
+        commitCoefficientEstimateField(estimateInput);
+        return;
+      }
+      const estimateStat = event.target.closest("[data-estimate-stat]");
+      if (estimateStat) {
+        toggleCoefficientStat(estimateStat.dataset.estimateStat, estimateStat.checked);
+        return;
+      }
+      const estimateOperator = event.target.closest("[data-estimate-operator]");
+      if (estimateOperator) {
+        setCoefficientOperator(estimateOperator.dataset.estimateOperator);
+        return;
+      }
+      const estimateAbility = event.target.closest("[data-estimate-ability]");
+      if (estimateAbility) {
+        setCoefficientAbility(estimateAbility.checked);
+        return;
+      }
+      const estimateDummyAc = event.target.closest("[data-estimate-dummy-ac]");
+      if (estimateDummyAc) {
+        toggleCoefficientDummyFactor("dummyAcFactors", estimateDummyAc.dataset.estimateDummyAc, estimateDummyAc.checked);
+        return;
+      }
+      const estimateDummyBuff = event.target.closest("[data-estimate-dummy-buff]");
+      if (estimateDummyBuff) {
+        toggleCoefficientDummyFactor("dummyBuffFactors", estimateDummyBuff.dataset.estimateDummyBuff, estimateDummyBuff.checked);
+        return;
+      }
       const dummyAc = event.target.closest("[data-reverse-dummy-ac]");
       if (dummyAc) {
         toggleReverseDummyFactor("dummyAcFactors", dummyAc.dataset.reverseDummyAc, dummyAc.checked);
@@ -1984,8 +3034,15 @@
       commitReverseField(input);
     });
 
-    document.getElementById("reversePanel").addEventListener("keydown", (event) => {
+    document.querySelector(".result-panel").addEventListener("keydown", (event) => {
       if (event.key !== "Enter") return;
+      const estimateInput = event.target.closest("[data-estimate-key]");
+      if (estimateInput) {
+        event.preventDefault();
+        commitCoefficientEstimateField(estimateInput);
+        estimateInput.blur();
+        return;
+      }
       const input = event.target.closest("[data-reverse-key]");
       if (!input) return;
       event.preventDefault();
@@ -2018,7 +3075,9 @@
       if (input.dataset.kind === "spec") {
         skillState.specs[key] = parseInputValue(input);
         skillState.specManual[key] = true;
-        delete skillState.convManual[key];
+        if (key !== "basePhysical") {
+          delete skillState.convManual[key];
+        }
       } else {
         skillState.convManual[key] = parseInputValue(input);
       }
@@ -2034,7 +3093,9 @@
       if (input.dataset.kind === "spec") {
         skillState.specs[key] = parseInputValue(input);
         skillState.specManual[key] = true;
-        delete skillState.convManual[key];
+        if (key !== "basePhysical") {
+          delete skillState.convManual[key];
+        }
       } else {
         skillState.convManual[key] = parseInputValue(input);
       }
@@ -2049,6 +3110,10 @@
   }
 
   function ensureReverseState() {
+    if (state.skill === "dummy") {
+      normalizeDummyState();
+      return state.dummy.reverse;
+    }
     const skillState = getCurrentSkillState();
     if (!skillState.reverse) skillState.reverse = defaultReverseState(state.skill);
     if (!Array.isArray(skillState.reverse.buffs)) skillState.reverse.buffs = [];
@@ -2068,6 +3133,65 @@
 
   function commitReverseField(input) {
     saveReverseFieldOnly(input);
+    render();
+  }
+
+  function saveCoefficientEstimateFieldOnly(input) {
+    normalizeDummyState();
+    state.dummy.coefficient[input.dataset.estimateKey] = parseReverseInputValue(input);
+    saveState();
+  }
+
+  function commitCoefficientEstimateField(input) {
+    saveCoefficientEstimateFieldOnly(input);
+    normalizeDummyState();
+    saveState();
+    render();
+  }
+
+  function toggleCoefficientStat(key, checked) {
+    normalizeDummyState();
+    if (!coefficientStats.some((stat) => stat.key === key)) return;
+    const selected = new Set(state.dummy.coefficient.stats || []);
+    if (checked) selected.add(key);
+    else selected.delete(key);
+    state.dummy.coefficient.stats = coefficientStats.map((stat) => stat.key).filter((statKey) => selected.has(statKey));
+    saveState();
+    render();
+  }
+
+  function setCoefficientOperator(key) {
+    normalizeDummyState();
+    if (!coefficientOperators.some((operator) => operator.key === key)) return;
+    state.dummy.coefficient.operator = key;
+    saveState();
+    render();
+  }
+
+  function setCoefficientAbility(checked) {
+    normalizeDummyState();
+    state.dummy.coefficient.useAbility = Boolean(checked);
+    saveState();
+    render();
+  }
+
+  function toggleCoefficientDummyFactor(listKey, value, checked) {
+    normalizeDummyState();
+    const coefficient = state.dummy.coefficient;
+    const selected = new Set(coefficient[listKey] || []);
+    if (checked) selected.add(value);
+    else selected.delete(value);
+    const allowed = listKey === "dummyAcFactors" ? reverseDummyAcFactors : reverseDummyBuffFactors;
+    coefficient[listKey] = allowed.map((factor) => factor.key).filter((key) => selected.has(key));
+    saveState();
+    render();
+  }
+
+  function toggleDummyCard(cardKey) {
+    normalizeDummyState();
+    if (!["reverse", "coefficient"].includes(cardKey)) return;
+    state.dummy.collapsedCards[cardKey] = !state.dummy.collapsedCards[cardKey];
+    saveState();
     render();
   }
 
@@ -2111,9 +3235,15 @@
 
   globalThis.DamageCalculator = {
     calculateCrasher,
+    calculateMartial,
     calculateMeteor,
+    calculateDummy,
     calculateReverseDamage,
+    calculateCoefficientEstimate,
+    coefficientStatBase,
     freshSkillState,
+    defaultDummyState,
+    importDummySpecsFromSkill,
     defaults,
   };
 

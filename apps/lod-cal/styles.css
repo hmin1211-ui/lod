@@ -52,7 +52,7 @@ button {
 }
 
 .app-shell {
-  width: min(1440px, calc(100vw - 32px));
+  width: min(1760px, calc(100vw - 32px));
   margin: 0 auto;
   padding: 24px 0;
 }
@@ -100,13 +100,43 @@ h2 {
 }
 
 .skill-tabs {
+  position: relative;
   display: inline-grid;
-  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  grid-template-columns: 84px 12px repeat(3, 72px);
   gap: 4px;
-  padding: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+}
+
+.skill-tabs::before {
+  content: "";
+  grid-column: 3 / 6;
+  grid-row: 1;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.78);
+}
+
+.skill-tab[data-skill="dummy"] {
+  grid-column: 1;
+  border: 1px solid rgba(37, 99, 235, 0.18);
+  color: #315f9b;
+  background: #eff7ff;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.08);
+}
+
+.skill-tab[data-skill="crasher"] {
+  grid-column: 3;
+}
+
+.skill-tab[data-skill="martial"] {
+  grid-column: 4;
+}
+
+.skill-tab[data-skill="meteor"] {
+  grid-column: 5;
 }
 
 .top-actions {
@@ -139,12 +169,17 @@ h2 {
 }
 
 .skill-tab {
+  position: relative;
+  z-index: 1;
+  grid-row: 1;
   min-height: 38px;
+  min-width: 0;
   border: 0;
   border-radius: 6px;
   color: var(--muted);
   background: transparent;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .skill-tab.active {
@@ -153,11 +188,25 @@ h2 {
   box-shadow: 0 8px 18px rgba(22, 122, 107, 0.22);
 }
 
+.skill-tab[data-skill="dummy"].active {
+  background: #7fb3e6;
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.16);
+}
+
 .workspace {
   display: grid;
   grid-template-columns: minmax(336px, 356px) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+}
+
+.dummy-workspace .result-table-wrap {
+  overflow: visible;
+  padding: 14px;
+}
+
+.input-panel[hidden] {
+  display: none;
 }
 
 .input-panel,
@@ -231,6 +280,12 @@ h2 {
 
 .result-table {
   table-layout: fixed;
+}
+
+.crasher-result,
+.martial-result,
+.meteor-result {
+  min-width: 100%;
 }
 
 th {
@@ -923,10 +978,42 @@ td.factor-hot {
 .result-table td[data-label="내려/사방"],
 .result-table td[data-label="대쉬"],
 .result-table td[data-label="암살"],
-.result-table td[data-label="합계"],
+.result-table td[data-label="다라"],
+.result-table td[data-label="구양"],
+.result-table td[data-label="선풍"],
+.result-table td[data-label="붕각"],
+.result-table td[data-label="단각"],
+.result-table td[data-label="지열"],
+.result-table td[data-label="합계"] {
+  text-align: right;
+}
+
 .meteor-result td.damage-strong,
 .meteor-result td.damage-main {
-  text-align: right;
+  text-align: center;
+}
+
+.result-table col.col-damage,
+.result-table th.col-damage,
+.result-table td.damage-strong,
+.result-table td.damage-total,
+.meteor-result td.damage-main {
+  width: auto;
+  min-width: 0;
+}
+
+.meteor-result col.col-damage,
+.meteor-result th.col-damage,
+.meteor-result td.damage-strong,
+.meteor-result td.damage-main {
+  min-width: 0;
+}
+
+.result-table td.damage-strong,
+.result-table td.damage-total,
+.meteor-result td.damage-main {
+  padding-left: 4px;
+  padding-right: 4px;
 }
 
 .monster-group {
@@ -1120,7 +1207,8 @@ td.factor-hot {
   align-items: center;
 }
 
-.dash-stack-select-wrap::after {
+.dash-stack-select-wrap::after,
+.dara-mana-select-wrap::after {
   content: "";
   position: absolute;
   right: 5px;
@@ -1134,9 +1222,9 @@ td.factor-hot {
   pointer-events: none;
 }
 
-.dash-stack-select {
+.dash-stack-select,
+.dara-mana-select {
   appearance: none;
-  width: 32px;
   height: 21px;
   padding: 0 13px 0 6px;
   border: 1px solid #c8d9d3;
@@ -1149,13 +1237,28 @@ td.factor-hot {
   cursor: pointer;
 }
 
+.dash-stack-select {
+  width: 32px;
+}
+
+.dara-mana-select-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.dara-mana-select {
+  width: 52px;
+}
+
 .dash-stack-unit {
   color: var(--muted);
   font-size: 0.68rem;
   font-weight: 900;
 }
 
-.dash-stack-select:focus {
+.dash-stack-select:focus,
+.dara-mana-select:focus {
   border-color: var(--accent);
   outline: 2px solid rgba(22, 122, 107, 0.16);
 }
@@ -1187,12 +1290,231 @@ td.factor-hot {
   background: #ffffff;
 }
 
+.dummy-tools {
+  display: grid;
+  gap: 14px;
+}
+
+.dummy-tools > div {
+  display: grid;
+  gap: 18px;
+}
+
+.dummy-tools .reverse-card {
+  margin: 0;
+}
+
+.dummy-import-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcf8;
+}
+
+.dummy-import-row td {
+  padding: 6px;
+  background: #ffffff;
+}
+
+.dummy-import-bar > span {
+  margin-right: 2px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.dummy-import-button {
+  min-width: 58px;
+  min-height: 30px;
+  padding: 5px 10px;
+  border: 1px solid #c8d2bd;
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.dummy-import-button:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.dummy-tools .reverse-condition-layout {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  align-items: start;
+}
+
+.dummy-tools .estimate-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 142px), 1fr));
+}
+
+.dummy-tools .estimate-grid-generic {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 142px), 1fr));
+}
+
+.coefficient-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(420px, 1.1fr);
+  grid-template-areas:
+    "measure stats"
+    "weights weights"
+    "outputs outputs";
+  gap: 12px;
+  align-items: stretch;
+}
+
+.coefficient-group {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcf8;
+}
+
+.coefficient-group h3 {
+  margin: 0;
+  color: var(--accent-strong);
+  font-size: 0.82rem;
+  white-space: nowrap;
+}
+
+.coefficient-input-group {
+  grid-area: measure;
+}
+
+.coefficient-stat-group {
+  grid-area: stats;
+}
+
+.coefficient-weight-group {
+  grid-area: weights;
+}
+
+.coefficient-weight-layout {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr));
+  gap: 8px;
+  align-items: start;
+}
+
+.coefficient-ability-group {
+  border-color: rgba(22, 122, 107, 0.32);
+  background: #f2fbf7;
+}
+
+.coefficient-ability-group .reverse-check {
+  width: 100%;
+  min-height: 38px;
+  justify-content: center;
+  background: #ffffff;
+}
+
+.coefficient-output-group {
+  grid-area: outputs;
+}
+
+.coefficient-field-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 156px), 1fr));
+  gap: 8px;
+}
+
+.coefficient-check-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+}
+
+.coefficient-output-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+  gap: 8px;
+}
+
+.coefficient-check-group {
+  align-content: start;
+  min-height: 100%;
+}
+
+.estimate-card .reverse-check-group {
+  gap: 6px;
+  padding: 9px;
+}
+
+.estimate-card .reverse-field span,
+.estimate-card .reverse-check span {
+  white-space: nowrap;
+}
+
+.coefficient-output {
+  min-width: 0;
+}
+
+.dummy-tools .reverse-output {
+  min-width: 0;
+}
+
+.coefficient-result {
+  border-color: rgba(22, 122, 107, 0.42);
+  background: #eef9f5;
+}
+
 .reverse-heading {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
   gap: 14px;
   margin-bottom: 12px;
+}
+
+.reverse-heading-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.card-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 5px 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 7px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.card-toggle-button:hover,
+.card-toggle-button:focus-visible {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  outline: none;
+}
+
+.reverse-source-field {
+  min-width: 120px;
+}
+
+.estimate-grid {
+  align-items: stretch;
 }
 
 .reverse-metrics {
@@ -1263,11 +1585,11 @@ td.factor-hot {
 }
 
 .reverse-grid-dummy-inputs {
-  grid-template-columns: minmax(150px, 1fr) minmax(140px, 0.9fr) minmax(92px, 0.55fr) minmax(92px, 0.55fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 118px), 1fr));
 }
 
 .reverse-grid-dummy-factors {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   justify-content: start;
   align-items: start;
 }
@@ -1278,7 +1600,7 @@ td.factor-hot {
 }
 
 .reverse-grid-target {
-  grid-template-columns: minmax(132px, 0.9fr) minmax(96px, 0.58fr) minmax(92px, 0.55fr) minmax(92px, 0.55fr) max-content max-content;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 118px), 1fr));
 }
 
 .reverse-grid-target .reverse-check-group {
@@ -1299,9 +1621,9 @@ td.factor-hot {
 .reverse-debuffs,
 .reverse-check-group {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 6px;
-  width: max-content;
+  width: auto;
   max-width: 100%;
   margin: 0;
   padding: 8px;
@@ -1380,6 +1702,25 @@ td.factor-hot {
   }
 }
 
+@media (max-width: 1180px) {
+  .coefficient-layout {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "measure stats"
+      "weights weights"
+      "outputs outputs";
+  }
+
+  .coefficient-weight-layout {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  }
+
+  .coefficient-input-group { grid-area: measure; }
+  .coefficient-stat-group { grid-area: stats; }
+  .coefficient-weight-group { grid-area: weights; }
+  .coefficient-output-group { grid-area: outputs; }
+}
+
 @media (max-width: 980px) {
   .result-table {
     table-layout: auto;
@@ -1400,6 +1741,8 @@ td.factor-hot {
 
   .result-table.crasher-result th,
   .result-table.crasher-result td,
+  .result-table.martial-result th,
+  .result-table.martial-result td,
   .result-table.meteor-result th,
   .result-table.meteor-result td {
     width: 100%;
@@ -1471,6 +1814,32 @@ td.factor-hot {
     grid-template-columns: repeat(2, minmax(160px, 1fr));
   }
 
+  .dummy-tools .reverse-condition-layout,
+  .dummy-tools .estimate-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .coefficient-layout,
+  .coefficient-check-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .coefficient-layout {
+    grid-template-areas:
+      "measure"
+      "stats"
+      "weights"
+      "outputs";
+  }
+
+  .coefficient-output-group {
+    grid-area: outputs;
+  }
+
+  .coefficient-input-group { grid-area: measure; }
+  .coefficient-stat-group { grid-area: stats; }
+  .coefficient-weight-group { grid-area: weights; }
+
   .reverse-metrics {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1493,6 +1862,7 @@ td.factor-hot {
 
   .skill-tabs {
     width: 100%;
+    grid-template-columns: minmax(72px, 1.15fr) 10px repeat(3, minmax(0, 1fr));
   }
 
   .top-actions,
@@ -1529,6 +1899,10 @@ td.factor-hot {
 
   .reverse-card {
     margin: 10px;
+  }
+
+  .dummy-workspace .result-table-wrap {
+    padding: 10px;
   }
 
   .reverse-heading {
