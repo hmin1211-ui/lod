@@ -340,3 +340,33 @@
 - 결과표 래퍼는 `overflow-x: clip`을 유지해 가로 스크롤을 만들지 않는다. 부족한 폭에서는 일부 잘림을 허용하고, 충분한 폭에서는 `col-damage` 데미지 컬럼이 남는 폭을 받아 글자 잘림을 줄인다.
 - 메테오 데미지 컬럼의 소제목과 데미지 값은 모두 중앙 정렬한다.
 - 허수아비 탭의 `허수아비 역산`, `기술 계수 측정` 카드는 각각 접기/펼치기가 가능하며, 상태는 `dummy.collapsedCards.reverse`, `dummy.collapsedCards.coefficient`에 저장된다.
+
+## 배포 안전 체크리스트
+
+- 데미지 계산기 배포 대상:
+  - Vercel/서비스 이름: `lod-cal`
+  - URL: `https://lod-cal.vercel.app/`
+  - GitHub 브랜치: `lod-cal`
+  - 변경 파일은 기본적으로 `apps/lod-cal/**`만 포함한다.
+- 키세팅 옵티마이저 배포 대상:
+  - Vercel/서비스 이름: `lod-keyopt`
+  - URL: `https://lod-keyopt.vercel.app/`
+  - GitHub 브랜치: `lod-keyopt-github`
+  - 변경 파일은 기본적으로 `lod-keyopt/**`, 키옵트 전용 `vercel.json/package.json/tools/build-static.mjs`만 포함한다.
+- 절대 금지:
+  - `lod-keyopt-github` 브랜치 HEAD를 그대로 `lod-cal` 또는 `main`에 push하지 말 것.
+  - `lod-cal` 또는 `main` 브랜치 HEAD를 그대로 `lod-keyopt-github`에 push하지 말 것.
+  - 프로젝트 이름과 브랜치 확인 없이 `git push github HEAD:lod-cal`, `git push github HEAD:main`, `git push github HEAD:lod-keyopt-github` 실행하지 말 것.
+- 데미지 계산기 배포 전 필수 확인:
+  - `git ls-remote --heads github lod-cal lod-keyopt-github main`로 브랜치가 각각 다른 목적의 커밋을 가리키는지 확인.
+  - `git diff --cached --name-only`에 `lod-keyopt/**`가 없어야 한다.
+  - `https://lod-cal.vercel.app/calculator/app.js`에는 lod-cal 최신 변경 문자열이 있어야 한다.
+  - `https://lod-keyopt.vercel.app/`가 데미지 계산기 HTML을 반환하면 배포 설정이 섞인 것이므로 추가 배포 전에 중단하고 사용자에게 알려야 한다.
+- 키옵트 배포 전 필수 확인:
+  - `git diff --cached --name-only`에 의도하지 않은 `apps/lod-cal/**`가 없어야 한다.
+  - `lod-keyopt-github` 브랜치에는 키옵트 전용 커밋만 올린다.
+- 배포 실수 발생 시:
+  - 먼저 `lod-cal`, `main`, `lod-keyopt-github`의 원격 커밋을 확인한다.
+  - 데미지 계산기 브랜치(`lod-cal` 또는 기존 production용 `main`)에 키옵트가 섞이면 키옵트 커밋만 revert한다.
+  - 키옵트 브랜치에 데미지 계산기가 섞이면 `lod-keyopt-github`를 키옵트 전용 커밋으로 복구한다.
+  - 복구 후 두 URL이 서로 다른 HTML/JS를 반환하는지 확인한다.
