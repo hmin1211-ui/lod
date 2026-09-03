@@ -7,7 +7,7 @@
 - 로컬 서버 예시:
   - PC 내부: `http://127.0.0.1:5173/`
   - 같은 내부망: `http://192.168.0.53:5174/`
-- 외부 공개 배포는 아직 진행하지 않음. 추후 Vercel 배포 예정.
+- 외부 공개 배포는 Vercel `lod-cal` 프로젝트로 관리. GitHub 브랜치는 `lod-cal`을 기준으로 한다.
 
 ## 데이터 저장 정책
 
@@ -299,14 +299,12 @@
 
 ## 배포 메모
 
-- Vercel 배포는 추후 진행.
-- 현재 환경에는 `vercel` CLI가 설치되어 있지 않았음.
-- Vercel 플러그인 설치는 승인되었지만 직접 배포 도구는 노출되지 않았음.
-- 추천 배포 방식:
-  - GitHub 저장소 생성
-  - Vercel New Project에서 GitHub 저장소 연결
-  - Framework Preset: Other
-  - Build Command / Output Directory 비워두기 가능
+- 데미지 계산기 Vercel 프로젝트명은 `lod-cal`.
+- 데미지 계산기 GitHub 브랜치는 `lod-cal`.
+- 키세팅 옵티마이저 Vercel 프로젝트명은 `lod-keyopt`.
+- 키세팅 옵티마이저 GitHub 브랜치는 `lod-keyopt-github`.
+- 두 프로젝트 모두 Vercel Root Directory는 저장소 루트 기준으로 둔다.
+- 배포 전 루트 [DEPLOYMENT_RULES.md](../../DEPLOYMENT_RULES.md)를 먼저 확인한다.
 
 ## 되돌리면 안 되는 중요 결정
 
