@@ -6,6 +6,7 @@
   const zeroToSix = [0, 1, 2, 3, 4, 5, 6];
   const zeroToTenUpgrade = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, "업글"];
   const jobTypes = ["순수", "도전", "직전/법전"];
+  const thiefJobTypes = ["순도", "전도"];
   const madTypes = ["일반", "업글"];
   const hordeOptions = ["Off", "호드목", "나겔목"];
   const curses = ["없음", "데프", "프라보", "어각", "아나테마"];
@@ -30,10 +31,10 @@
   ];
   const elementNameMap = { 수토공: "속공", 생공: "생(암)공", 속암: "암방", 암암: "암암(반속)" };
   const hotTimes = ["Off", "평일", "주말"];
-  const skillKeys = ["crasher", "martial", "meteor"];
+  const skillKeys = ["crasher", "martial", "thief", "meteor"];
   const tabKeys = [...skillKeys, "dummy"];
-  const physicalSkillKeys = new Set(["crasher", "martial"]);
-  const skillLabels = { crasher: "전사", martial: "무도가", meteor: "메테오", dummy: "허수아비" };
+  const physicalSkillKeys = new Set(["crasher", "martial", "thief"]);
+  const skillLabels = { crasher: "전사", martial: "무도가", thief: "도적", meteor: "메테오", dummy: "허수아비" };
   const reverseDebuffs = ["호르/자보", "콜라마", "매프"];
   const reverseBuffs = ["속강", "집중", "나르", "트랩"];
   const reverseDummyAcFactors = [
@@ -55,6 +56,7 @@
   const resultFontScales = [100, 85, 70];
   const crasherDamageKeys = ["mad", "crasher", "fury", "downFourWay", "jobSkill"];
   const martialDamageKeys = ["dara", "guyang", "whirlwind", "punggak", "dangak", "jiyeol"];
+  const thiefDamageKeys = ["assassin", "mad", "crasher", "stab1", "stab2", "ambush", "snipe", "backstep"];
   const martialKickOptions = [4, 10, "업글"];
   const martialWindOptions = [2, 10, "업글"];
   const martialDaraManaModes = ["풀마", "1틱"];
@@ -82,6 +84,17 @@
     { key: "jiyeolLevel", damageKey: "jiyeol", label: "지열", type: "select", options: martialWindOptions },
   ];
   const martialInputTechniqueDefs = martialTechniqueDefs.filter((technique) => technique.type !== "fixed");
+  const thiefAssassinOptions = [0.375, 1];
+  const thiefPureAssassinOptions = [0.7, 1.05, 1.4, 1.75, 2.45];
+  const thiefTechniqueDefs = [
+    { key: "assassinLevel", damageKey: "assassin", label: "암살", pureLabel: "암살진", type: "select" },
+    { key: "stab1Level", damageKey: "stab1", label: "찔러1", type: "number" },
+    { key: "stab2Level", damageKey: "stab2", label: "찔러2", type: "number" },
+    { key: "ambushLevel", damageKey: "ambush", label: "습격", type: "number", recognition: true },
+    { key: "snipeLevel", damageKey: "snipe", label: "저격", type: "number", recognition: true },
+    { key: "backstepLevel", damageKey: "backstep", label: "백스텝", type: "number", pureOnly: true, recognition: true },
+  ];
+  const thiefIntegerTechniqueKeys = new Set(thiefTechniqueDefs.filter((technique) => technique.key !== "assassinLevel").map((technique) => technique.key));
 
   const curseValueCrasher = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
   const curseValueMeteor = { 없음: 0, 데프: 50, 프라보: 65, 어각: 70, 아나테마: 75 };
@@ -263,6 +276,59 @@
     { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
   ];
 
+  function thiefTechniqueDefsForJob(jobType) {
+    return thiefTechniqueDefs
+      .filter((technique) => !technique.pureOnly || jobType === "순도")
+      .map((technique) => ({
+        ...technique,
+        label: jobType === "순도" && technique.pureLabel ? technique.pureLabel : technique.label,
+      }));
+  }
+
+  function buildThiefDefs(jobType = state?.thief?.specs?.jobType || defaults?.thief?.specs?.jobType || "순도") {
+    const assassinOptions = jobType === "순도" ? thiefPureAssassinOptions : thiefAssassinOptions;
+    return [
+      { section: "기본" },
+      { key: "jobType", label: "전직", type: "select", options: thiefJobTypes },
+      { key: "ability", label: "어빌", type: "number" },
+      { key: "basePhysical", label: "무장체", type: "number" },
+      { key: "weaponMin", label: "무기 민뎀", type: "number" },
+      { key: "weaponMax", label: "무기 맥뎀", type: "number" },
+      { key: "str", label: "힘", type: "number" },
+      { key: "con", label: "콘", type: "number" },
+      { key: "dex", label: "덱스", type: "number" },
+      { key: "damage", label: "DAM", type: "number" },
+      { section: "기술" },
+      ...thiefTechniqueDefsForJob(jobType).map((technique) =>
+        technique.key === "assassinLevel"
+          ? { key: technique.key, label: technique.label, type: "select", options: assassinOptions }
+          : { key: technique.key, label: technique.label, type: "calibrate", buttonLabel: "데미지 입력" },
+      ),
+      { section: "장비 - 에테르 강화 수치 입력" },
+      { key: "ring1", label: "반지1", type: "number", factors: ["ac"] },
+      { key: "ring2", label: "반지2", type: "number", factors: ["ac"] },
+      { key: "weapon", label: "무기", type: "number", factors: ["damage"] },
+      { key: "acc1", label: "악세1", type: "number", factors: ["damage"] },
+      { key: "acc2", label: "악세2", type: "number", factors: ["damage"] },
+      { key: "extraElement", label: "이펙트", type: "number", factors: ["buff"] },
+      { key: "horde", label: "호드/나겔목", type: "select", options: hordeOptions, factors: ["buff"] },
+      { section: "AC가중치" },
+      { key: "curse", label: "저주", type: "select", options: curses, factors: ["ac"] },
+      { key: "arc", label: "아크", type: "select", options: zeroToThree, factors: ["ac"] },
+      { key: "abre", label: "아브", type: "select", options: zeroToThree, factors: ["ac"] },
+      { key: "ambush", label: "기습", type: "select", options: onOff, factors: ["ac"] },
+      { section: "버프가중치" },
+      { key: "elementBoost", label: "속강", type: "select", options: onOff, factors: ["buff"] },
+      { key: "elementAttack", label: "속성(공방)", type: "select", options: crasherElements, factors: ["buff"] },
+      { key: "move", label: "움(렙)", type: "select", options: zeroToSix, factors: ["buff"] },
+      { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
+      { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
+      { section: "기타" },
+      { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
+      { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
+    ];
+  }
+
   const dummyDefs = [
     { section: "기본" },
     { key: "ability", label: "어빌", type: "number" },
@@ -370,6 +436,45 @@
       conv: { flatPhysical: 0, strConverted: 0, conConverted: 0 },
       daraManaMode: "풀마",
     },
+    thief: {
+      specs: {
+        jobType: "순도",
+        ability: 201,
+        basePhysical: 1000000,
+        weaponMin: 0,
+        weaponMax: 0,
+        str: 180,
+        con: 180,
+        dex: 180,
+        damage: 0,
+        assassinLevel: 0.7,
+        stab1Level: 0,
+        stab2Level: 0,
+        ambushLevel: 0,
+        snipeLevel: 0,
+        backstepLevel: 0,
+        ring1: 0,
+        ring2: 0,
+        weapon: 0,
+        acc1: 0,
+        acc2: 0,
+        elementBoost: "Off",
+        elementAttack: "숲철공",
+        move: 0,
+        curse: "없음",
+        arc: 0,
+        abre: 0,
+        ambush: "Off",
+        focus: "Off",
+        trap: "Off",
+        nar: "Off",
+        hotTime: "Off",
+        spirit: 0,
+        extraElement: 0,
+        horde: "Off",
+      },
+      conv: { flatPhysical: 0 },
+    },
     meteor: {
       specs: {
         ability: 201,
@@ -406,6 +511,7 @@
     skill: "crasher",
     crasher: freshSkillState("crasher"),
     martial: freshSkillState("martial"),
+    thief: freshSkillState("thief"),
     meteor: freshSkillState("meteor"),
     dummy: defaultDummyState(),
   };
@@ -425,6 +531,7 @@
       resultFontScale: 100,
       ...(skill === "crasher" ? { damageIncludes: defaultCrasherDamageIncludes() } : {}),
       ...(skill === "martial" ? { damageIncludes: defaultMartialDamageIncludes(), daraManaMode: defaults.martial.daraManaMode } : {}),
+      ...(skill === "thief" ? { damageIncludes: defaultThiefDamageIncludes(), thiefPractice: {} } : {}),
     };
   }
 
@@ -454,6 +561,127 @@
     }, {});
   }
 
+  function defaultThiefDamageIncludes() {
+    return thiefDamageKeys.reduce((acc, key) => ({ ...acc, [key]: true }), {});
+  }
+
+  function normalizeThiefDamageIncludes(value) {
+    const defaults = defaultThiefDamageIncludes();
+    if (!value || typeof value !== "object") return defaults;
+    return thiefDamageKeys.reduce((acc, key) => {
+      acc[key] = value[key] !== false;
+      return acc;
+    }, {});
+  }
+
+  function hotTimePercent(value) {
+    if (value === "평일") return 15;
+    if (value === "주말" || value === "On") return 20;
+    return Number(value) || 0;
+  }
+
+  function defaultThiefPracticeEntry(specs = defaults.thief.specs) {
+    return {
+      damage: 0,
+      necklaceBonus: 0,
+      attackElement: specs.elementAttack,
+      ability: specs.ability,
+      ring1: 0,
+      ring2: 0,
+      weapon: 0,
+      acc1: 0,
+      acc2: 0,
+      elementBoost: "Off",
+      move: 0,
+      trap: "Off",
+      nar: "Off",
+      extraElement: 0,
+      horde: "Off",
+      hotTime: 0,
+      spirit: 0,
+    };
+  }
+
+  function importedThiefPracticeEntry(specs = defaults.thief.specs) {
+    return {
+      ...defaultThiefPracticeEntry(specs),
+      attackElement: specs.elementAttack,
+      ability: specs.ability,
+      ring1: specs.ring1,
+      ring2: specs.ring2,
+      weapon: specs.weapon,
+      acc1: specs.acc1,
+      acc2: specs.acc2,
+      elementBoost: specs.elementBoost,
+      move: specs.move,
+      trap: specs.trap,
+      nar: specs.nar,
+      extraElement: specs.extraElement,
+      horde: specs.horde,
+      hotTime: hotTimePercent(specs.hotTime),
+      spirit: specs.spirit,
+    };
+  }
+
+  function defaultThiefPracticeState(specs = defaults.thief.specs) {
+    return thiefTechniqueDefs.reduce((acc, technique) => ({ ...acc, [technique.key]: defaultThiefPracticeEntry(specs) }), {});
+  }
+
+  function normalizeThiefPracticeEntry(value, specs = defaults.thief.specs) {
+    const defaults = defaultThiefPracticeEntry(specs);
+    if (typeof value === "number" || typeof value === "string") {
+      return { ...defaults, damage: Number(value) || 0 };
+    }
+    if (!value || typeof value !== "object") return defaults;
+    return {
+      ...defaults,
+      ...value,
+      attackElement: crasherElements.includes(value.attackElement) ? value.attackElement : defaults.attackElement,
+      elementBoost: onOff.includes(value.elementBoost) ? value.elementBoost : defaults.elementBoost,
+      trap: onOff.includes(value.trap) ? value.trap : defaults.trap,
+      nar: onOff.includes(value.nar) ? value.nar : defaults.nar,
+      horde: hordeOptions.includes(value.horde) ? value.horde : defaults.horde,
+    };
+  }
+
+  function normalizeThiefPracticeState(skillState = state.thief) {
+    const specs = skillState?.specs || defaults.thief.specs;
+    const values = skillState?.thiefPractice || {};
+    return thiefTechniqueDefs.reduce((acc, technique) => {
+      acc[technique.key] = normalizeThiefPracticeEntry(values[technique.key], specs);
+      return acc;
+    }, {});
+  }
+
+  function getThiefPracticeEntry(key) {
+    if (!state.thief.thiefPractice || typeof state.thief.thiefPractice !== "object") {
+      state.thief.thiefPractice = defaultThiefPracticeState(state.thief.specs);
+    }
+    state.thief.thiefPractice[key] = normalizeThiefPracticeEntry(state.thief.thiefPractice[key], state.thief.specs);
+    return state.thief.thiefPractice[key];
+  }
+
+  function importThiefPracticeEntry(key) {
+    const current = normalizeThiefPracticeEntry(state.thief.thiefPractice?.[key], state.thief.specs);
+    state.thief.thiefPractice[key] = {
+      ...importedThiefPracticeEntry(state.thief.specs),
+      damage: current.damage,
+      necklaceBonus: current.necklaceBonus,
+    };
+    delete state.thief.convManual[key];
+    saveState();
+    renderThiefCalibrationDialog(key);
+    render();
+  }
+
+  function resetThiefPracticeEntry(key) {
+    state.thief.thiefPractice[key] = defaultThiefPracticeEntry(state.thief.specs);
+    delete state.thief.convManual[key];
+    saveState();
+    renderThiefCalibrationDialog(key);
+    render();
+  }
+
   function defaultDownFourWayState() {
     return {
       furyDamage: "",
@@ -468,6 +696,7 @@
       dummyAttackElement: defaults[skill].specs.elementAttack,
       dummyAcFactors: ["rings"],
       dummyBuffFactors: reverseDummyBuffFactors.map((factor) => factor.key),
+      isRecognition: false,
       dummyHotTime: 0,
       dummyHotTimePercentInput: true,
       dummySpirit: 0,
@@ -531,6 +760,7 @@
         attackElement: "생암",
         dummyAcFactors: ["rings"],
         dummyBuffFactors: reverseDummyBuffFactors.map((factor) => factor.key),
+        isRecognition: false,
         dummyHotTime: 0,
         dummySpirit: 0,
         stats: ["str", "con"],
@@ -578,6 +808,7 @@
       skill: state.skill,
       crasher: state.crasher,
       martial: state.martial,
+      thief: state.thief,
       meteor: state.meteor,
       dummy: state.dummy,
     };
@@ -599,6 +830,7 @@
       state[skill].collapsedSections = Array.isArray(saved[skill].collapsedSections) ? saved[skill].collapsedSections : [];
       state[skill].reverse = { ...state[skill].reverse, ...(saved[skill].reverse || {}) };
       state[skill].downFourWay = { ...state[skill].downFourWay, ...(saved[skill].downFourWay || {}) };
+      state[skill].thiefPractice = { ...(state[skill].thiefPractice || {}), ...(saved[skill].thiefPractice || {}) };
       state[skill].dashStacks = saved[skill].dashStacks;
       state[skill].resultFontScale = saved[skill].resultFontScale;
       if (skill === "crasher") {
@@ -609,6 +841,10 @@
         state[skill].daraManaMode = martialDaraManaModes.includes(saved[skill].daraManaMode)
           ? saved[skill].daraManaMode
           : defaults.martial.daraManaMode;
+      }
+      if (skill === "thief") {
+        state[skill].damageIncludes = normalizeThiefDamageIncludes(saved[skill].damageIncludes);
+        state[skill].thiefPractice = normalizeThiefPracticeState(state[skill]);
       }
       migrateSavedSkillState(skill);
     }
@@ -652,6 +888,16 @@
       skillState.daraManaMode = martialDaraManaModes.includes(skillState.daraManaMode)
         ? skillState.daraManaMode
         : defaults.martial.daraManaMode;
+    }
+    if (skill === "thief") {
+      skillState.damageIncludes = normalizeThiefDamageIncludes(skillState.damageIncludes);
+      if (skillState.specs.jobType === "순수") {
+        skillState.specs.jobType = "순도";
+      }
+      if (!thiefJobTypes.includes(skillState.specs.jobType)) {
+        skillState.specs.jobType = defaults.thief.specs.jobType;
+      }
+      skillState.thiefPractice = normalizeThiefPracticeState(skillState);
     }
     if (skillState.specs.horde === "On") {
       skillState.specs.horde = "호드목";
@@ -697,6 +943,7 @@
     if (!Array.isArray(skillState.reverse?.dummyBuffFactors)) {
       skillState.reverse.dummyBuffFactors = reverseDummyBuffFactors.map((factor) => factor.key);
     }
+    skillState.reverse.isRecognition = Boolean(skillState.reverse.isRecognition);
     skillState.reverse.dummyAcFactors = skillState.reverse.dummyAcFactors.filter((key) =>
       reverseDummyAcFactors.some((factor) => factor.key === key),
     );
@@ -714,6 +961,9 @@
     skillState.reverse.targetSpirit = Number(skillState.reverse.targetSpirit) || 0;
     if (!skillState.downFourWay || typeof skillState.downFourWay !== "object") {
       skillState.downFourWay = defaultDownFourWayState();
+    }
+    if (skill === "thief" && (!skillState.thiefPractice || typeof skillState.thiefPractice !== "object")) {
+      skillState.thiefPractice = defaultThiefPracticeState(skillState.specs);
     }
     skillState.dashStacks = clampInt(skillState.dashStacks, 1, 6, 1);
     skillState.resultFontScale = resultFontScales.includes(Number(skillState.resultFontScale))
@@ -826,6 +1076,7 @@
     state.dummy.reverse.dummySpirit = Number(state.dummy.reverse.dummySpirit) || 0;
     state.dummy.reverse.targetHotTime = Number(state.dummy.reverse.targetHotTime) || 0;
     state.dummy.reverse.targetSpirit = Number(state.dummy.reverse.targetSpirit) || 0;
+    state.dummy.reverse.isRecognition = Boolean(state.dummy.reverse.isRecognition);
     state.dummy.coefficient = { ...defaultDummyState().coefficient, ...(state.dummy.coefficient || {}) };
     state.dummy.coefficient.attackElement = normalizeElementName(state.dummy.coefficient.attackElement);
     if (!coefficientElements.some((option) => option.value === state.dummy.coefficient.attackElement)) {
@@ -856,6 +1107,7 @@
     state.dummy.coefficient.dummyHotTime = Number(state.dummy.coefficient.dummyHotTime) || 0;
     state.dummy.coefficient.dummySpirit = Number(state.dummy.coefficient.dummySpirit) || 0;
     state.dummy.coefficient.useAbility = Boolean(state.dummy.coefficient.useAbility);
+    state.dummy.coefficient.isRecognition = Boolean(state.dummy.coefficient.isRecognition);
   }
 
   function importDummySpecsFromSkill(skill) {
@@ -956,7 +1208,7 @@
     if (value === "집중(전사)") return 1;
     if (value === "변신마스터") return 0.3;
     if (value === "정신집중(도가)") return 0.4;
-    if (value === "On") return sourceSkill === "crasher" ? 1 : 0.3;
+    if (value === "On") return sourceSkill === "crasher" || sourceSkill === "thief" ? 1 : 0.3;
     return martialFocusValue(value);
   }
 
@@ -1009,6 +1261,51 @@
     if (key === "whirlwindLevel") return martialBaseCoefficients.wind * levelNumber;
     if (key === "jiyeolLevel") return martialBaseCoefficients.jiyeol * levelNumber;
     return 0;
+  }
+
+  function calculateThiefPracticeConversion(skillState, technique) {
+    const entry = normalizeThiefPracticeEntry(skillState?.thiefPractice?.[technique.key], skillState?.specs || defaults.thief.specs);
+    const damage = Number(entry.damage) || 0;
+    const necklaceBonus = Number(entry.necklaceBonus) || 0;
+    const adjustedDamage = Math.max(0, damage - necklaceBonus);
+    const c = {
+      ability: abilityCoefficient(entry.ability),
+      ring1: equipLevel(entry.ring1, 1),
+      ring2: equipLevel(entry.ring2, 1),
+      weapon: equipLevel(entry.weapon, 0.03),
+      acc1: equipLevel(entry.acc1, 0.01),
+      acc2: equipLevel(entry.acc2, 0.01),
+      elementBoost: onValue(entry.elementBoost),
+      move: (Number(entry.move) || 0) * 0.4,
+      trap: onValue(entry.trap),
+      nar: onValue(entry.nar),
+      extraElement: equipLevel(entry.extraElement, 0.01),
+      horde: hordeValue(entry.horde),
+    };
+    c.elementAttack = crasherElementValue(entry.attackElement, c);
+    const acChanged = 100 + c.ring1 + c.ring2;
+    const acWeight = defenseRate(acChanged);
+    const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
+    const buffWeight = buffWeightWithElement(c.elementAttack, c.move + c.trap + c.nar);
+    const hotTimeWeight = 1 + (Number(entry.hotTime) || 0) / 100;
+    const spiritWeight = 1 + (Number(entry.spirit) || 0) / 100;
+    const acPower = technique.recognition ? 2 : 1;
+    const divisor = acWeight ** acPower * damageIncrease * buffWeight * hotTimeWeight * spiritWeight * c.ability;
+    return {
+      value: divisor > 0 ? adjustedDamage / divisor : 0,
+      damage,
+      necklaceBonus,
+      adjustedDamage,
+      abilityWeight: c.ability,
+      acChanged,
+      acWeight,
+      damageIncrease,
+      buffWeight,
+      hotTimeWeight,
+      spiritWeight,
+      divisor,
+      isRecognition: Boolean(technique.recognition),
+    };
   }
 
   function abilityCoefficient(ability, rate = 0.0041) {
@@ -1303,6 +1600,113 @@
     return { conversions: c, rows: orderedRows, damageIncludes, factorSummary: buildFactorSummary(orderedRows, c, "martial") };
   }
 
+  function calculateThief(inputState = state.thief) {
+    const s = inputState.specs;
+    const isPure = s.jobType === "순도";
+    const c = {};
+    c.jobType = s.jobType === "순도" ? 4 : 2;
+    c.ability = applyManual(inputState, "ability", abilityCoefficient(s.ability));
+    c.flatPhysical = applyManual(inputState, "basePhysical", defaults.thief.conv.flatPhysical);
+    c.weaponMin = Number(s.weaponMin) || 0;
+    c.weaponMax = Number(s.weaponMax) || 0;
+    c.str = Number(s.str) || 0;
+    c.con = Number(s.con) || 0;
+    c.dex = Number(s.dex) || 0;
+    c.damage = Number(s.damage) || 0;
+    c.ring1 = applyManual(inputState, "ring1", equipLevel(s.ring1, 1));
+    c.ring2 = applyManual(inputState, "ring2", equipLevel(s.ring2, 1));
+    c.weapon = applyManual(inputState, "weapon", equipLevel(s.weapon, 0.03));
+    c.acc1 = applyManual(inputState, "acc1", equipLevel(s.acc1, 0.01));
+    c.acc2 = applyManual(inputState, "acc2", equipLevel(s.acc2, 0.01));
+    c.elementBoost = applyManual(inputState, "elementBoost", onValue(s.elementBoost));
+    c.move = applyManual(inputState, "move", (Number(s.move) || 0) * 0.4);
+    c.focus = 0;
+    c.trap = applyManual(inputState, "trap", onValue(s.trap));
+    c.nar = applyManual(inputState, "nar", onValue(s.nar));
+    c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
+    c.arc = applyManual(inputState, "arc", (Number(s.arc) || 0) * 13);
+    c.abre = applyManual(inputState, "abre", (Number(s.abre) || 0) * 18);
+    c.ambush = applyManual(inputState, "ambush", s.ambush === "On" || Number(s.ambush) === 1 ? 20 : 0);
+    c.hotTime = applyManual(
+      inputState,
+      "hotTime",
+      s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
+    );
+    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
+    c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
+    c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
+    c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
+    const acChangedDummy = 100 + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
+    const dummyAcWeight = defenseRate(acChangedDummy);
+    const dummyDamageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
+    const dummyBuffWeight = buffWeightWithElement(c.elementAttack, c.move + c.trap + c.nar);
+    const dummyHotTimeWeight = 1 + c.hotTime;
+    const dummySpiritWeight = 1 + c.spirit;
+    const dummyDivisor = dummyAcWeight * dummyDamageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
+    const dummyRecognitionDivisor = dummyAcWeight * dummyAcWeight * dummyDamageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
+    for (const technique of thiefTechniqueDefs) {
+      c[technique.key] =
+        technique.key === "assassinLevel"
+          ? Number(s.assassinLevel) || 0
+          : applyManual(inputState, technique.key, calculateThiefPracticeConversion(inputState, technique).value);
+    }
+    const damageIncludes = normalizeThiefDamageIncludes(inputState.damageIncludes);
+    const activeTechniques = thiefTechniqueDefsForJob(s.jobType);
+    const monsterRows = [...crasherMonsterRows, ...normalizeCustomMonsters(inputState.customMonsters)];
+    const rows = monsterRows.map((monster) => {
+      const acChanged = monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
+      const rowDamageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
+      const rowBuffWeight = buffWeightWithElement(c.elementAttack, c.move + c.trap + c.nar);
+      const acWeight = defenseRate(acChanged);
+      const percent = acWeight * rowDamageIncrease * rowBuffWeight;
+      const recognitionPercent = acWeight * acWeight * rowDamageIncrease * rowBuffWeight;
+      const percentWithoutFocus = acWeight * rowDamageIncrease * rowBuffWeight;
+      const hotTimeWeight = monster.kind !== "boss" ? 1 + c.hotTime : 1;
+      const spiritWeight = 1 + c.spirit;
+      const damages = activeTechniques.reduce((acc, technique) => {
+        const rowPercent = technique.recognition ? recognitionPercent : percent;
+        acc[technique.damageKey] = c[technique.key] * c.ability * rowPercent * hotTimeWeight * spiritWeight;
+        return acc;
+      }, {});
+      const base = Number(s.basePhysical) || 0;
+      const flatBonusElements = new Set(["생암", "생(암)공"]);
+      const flatBonus = flatBonusElements.has(normalizeElementName(s.elementAttack)) && monster.kind !== "boss" ? c.flatPhysical : 0;
+      if (!isPure) {
+        damages.assassin = (base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight;
+        damages.mad = (base * 0.1 * 0.5 * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight;
+        damages.crasher = (base * 2 * percent * hotTimeWeight + flatBonus) * spiritWeight;
+      } else {
+        damages.assassin = (base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight;
+      }
+      const includedKeys = isPure
+        ? ["assassin", "stab1", "stab2", "ambush", "snipe", "backstep"]
+        : ["assassin", "mad", "crasher", "stab1", "stab2", "ambush", "snipe"];
+      const totalDamage = includedKeys.reduce(
+        (total, key) => total + (damageIncludes[key] ? damages[key] || 0 : 0),
+        0,
+      );
+      const total = monster.kind === "boss" ? Math.trunc(totalDamage) : null;
+      const balrogShot = monster.kind === "boss" ? 36000000 - total : null;
+      return {
+        ...monster,
+        acChanged,
+        acWeight,
+        damageIncrease: rowDamageIncrease,
+        buffWeight: rowBuffWeight,
+        hotTimeWeight,
+        spiritWeight,
+        percent,
+        damages,
+        totalDamage,
+        total,
+        balrogShot,
+      };
+    });
+
+    const orderedRows = orderedRowsForSkill("thief", rows);
+    return { conversions: c, rows: orderedRows, damageIncludes, factorSummary: buildFactorSummary(orderedRows, c, "thief") };
+  }
+
   function calculateDummy(inputState = state.dummy) {
     const s = { ...defaultDummySpecs(), ...(inputState.specs || {}) };
     if (!inputState.convManual) inputState.convManual = {};
@@ -1477,7 +1881,11 @@
         ? ["반지1", "반지2", "저주", "아크", "아브", "기습"]
         : ["반지1", "반지2", "저주", "아크", "아브", "기습"];
     const buffFactors =
-      physicalSkillKeys.has(skill) ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"] : ["속강", "속성(공방)", "트랩", "나르", "이펙트", "호드/나겔목"];
+      skill === "thief"
+        ? ["속강", "속성(공방)", "움", "트랩", "나르", "이펙트", "호드/나겔목"]
+        : physicalSkillKeys.has(skill)
+          ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"]
+          : ["속강", "속성(공방)", "트랩", "나르", "이펙트", "호드/나겔목"];
     return [
       {
         key: "ac",
@@ -1548,6 +1956,7 @@
   function calculateResultForSkill(skill) {
     if (skill === "crasher") return calculateCrasher(state.crasher);
     if (skill === "martial") return calculateMartial(state.martial);
+    if (skill === "thief") return calculateThief(state.thief);
     if (skill === "dummy") return calculateDummy(state.dummy);
     return calculateMeteor(state.meteor);
   }
@@ -1568,16 +1977,24 @@
     if (martialTechniqueDefs.some((technique) => technique.key === key)) {
       delete skillState.convManual[key];
     }
+    if (thiefTechniqueDefs.some((technique) => technique.key === key)) {
+      delete skillState.convManual[key];
+    }
     if (key === "jobType") {
       delete skillState.convManual.madType;
     }
   }
 
-  function getCurrentDefs() {
-    if (state.skill === "crasher") return crasherDefs;
-    if (state.skill === "martial") return martialDefs;
-    if (state.skill === "dummy") return dummyDefs;
+  function defsForSkill(skill) {
+    if (skill === "crasher") return crasherDefs;
+    if (skill === "martial") return martialDefs;
+    if (skill === "thief") return buildThiefDefs(state.thief?.specs?.jobType || defaults.thief.specs.jobType);
+    if (skill === "dummy") return dummyDefs;
     return meteorDefs;
+  }
+
+  function getCurrentDefs() {
+    return defsForSkill(state.skill);
   }
 
   function getCurrentSkillState() {
@@ -1643,7 +2060,8 @@
     const dummyBuffWeight = buffWeightWithElement(dummyElementValue, dummyBuffAdditive);
     const dummyHotTimeWeight = 1 + (Number(reverse.dummyHotTime) || 0) / 100;
     const dummySpiritWeight = 1 + (Number(reverse.dummySpirit) || 0) / 100;
-    const originalDivider = dummyAcWeight * damageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
+    const acPower = reverse.isRecognition ? 2 : 1;
+    const originalDivider = dummyAcWeight ** acPower * damageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
     const baseBuffWeight = targetElementBuffWeight || 1;
     const targetFocusWeight = state.skill === "dummy" || sourceSkill === "martial" ? result.conversions.focus || 0 : 1;
     const selectedBuffWeight =
@@ -1655,7 +2073,7 @@
     const targetAcWeight = defenseRate(targetAc);
     const targetHotTimeWeight = 1 + (Number(reverse.targetHotTime) || 0) / 100;
     const targetSpiritWeight = 1 + (Number(reverse.targetSpirit) || 0) / 100;
-    const targetPercent = targetAcWeight * damageIncrease * (selectedBuffWeight / debuffTotal) * targetHotTimeWeight * targetSpiritWeight;
+    const targetPercent = targetAcWeight ** acPower * damageIncrease * (selectedBuffWeight / debuffTotal) * targetHotTimeWeight * targetSpiritWeight;
     const originalDamage = originalDivider ? dummyDamage / originalDivider : 0;
 
     return {
@@ -1675,6 +2093,7 @@
       targetSpiritWeight,
       elementDebuffValue: targetElementDebuffValue,
       debuffTotal,
+      isRecognition: reverse.isRecognition,
     };
   }
 
@@ -1730,12 +2149,15 @@
 
   function conversionFor(key, result) {
     const map = result.conversions;
+    if (state.skill === "thief" && key === "jobType") return "";
+    if (state.skill === "thief" && thiefTechniqueDefs.some((technique) => technique.key === key)) return map[key] ?? "";
     if (key === "jobType") return map.jobType;
     if (key === "madType") return map.madType;
     if (key === "furyLevel") return map.furyLevel;
     if (key === "dashLevel") return map.dashLevel;
     if (key === "downFourWayLevel") return map.downFourWayLevel;
     if (martialTechniqueDefs.some((technique) => technique.key === key)) return map[key];
+    if (state.skill === "thief" && thiefTechniqueDefs.some((technique) => technique.key === key)) return "";
     if (state.skill === "dummy" && ["basePhysical", "weaponMin", "weaponMax", "str", "con", "dex", "int", "damage"].includes(key)) {
       return "";
     }
@@ -1757,6 +2179,9 @@
     if (skill === "martial") {
       return new Set(["basePhysical", ...martialInputTechniqueDefs.map((technique) => technique.key), "hotTime"]);
     }
+    if (skill === "thief") {
+      return new Set(["basePhysical", "hotTime"]);
+    }
     if (skill === "dummy") {
       return new Set(["hotTime"]);
     }
@@ -1764,7 +2189,7 @@
   }
 
   function readonlyConversionKeysForSkill(skill) {
-    const defs = skill === "crasher" ? crasherDefs : skill === "martial" ? martialDefs : skill === "dummy" ? dummyDefs : meteorDefs;
+    const defs = defsForSkill(skill);
     const editable = editableConversionKeysForSkill(skill);
     return defs
       .filter((def) => def.key && !editable.has(def.key))
@@ -1776,7 +2201,14 @@
   }
 
   function formatConversionInputValue(key, value) {
-    if (key === "dashLevel" || martialTechniqueDefs.some((technique) => technique.key === key)) return formatDecimalInputValue(value, 2);
+    if (
+      key === "dashLevel" ||
+      martialTechniqueDefs.some((technique) => technique.key === key)
+    ) {
+      return formatDecimalInputValue(value, 2);
+    }
+    if (thiefIntegerTechniqueKeys.has(key)) return formatDecimalInputValue(value, 0);
+    if (key === "assassinLevel") return formatDecimalInputValue(value, 4);
     return formatDecimalInputValue(value, 4);
   }
 
@@ -1948,6 +2380,10 @@
       return `<button class="field-control calibrate-button" type="button" data-open-down-fourway>비율 입력</button>`;
     }
 
+    if (state.skill === "thief" && def.type === "calibrate") {
+      return `<button class="field-control calibrate-button" type="button" data-open-thief-calibration="${def.key}">${def.buttonLabel || "허수아비 입력"}</button>`;
+    }
+
     if (def.type === "select") {
       return `<select class="field-control" data-kind="spec" data-key="${def.key}">${def.options
         .map((option) => `<option value="${option}" ${String(specs[def.key]) === String(option) ? "selected" : ""}>${option}</option>`)
@@ -1966,7 +2402,6 @@
     const suffixes = {
       manaReduction: "%",
       spirit: "%",
-      damage: "%",
     };
     return suffixes[key] || "";
   }
@@ -2012,6 +2447,157 @@
       <span>내려 ${formatNumber(downRatio, 4)}</span>
       <strong>합산 ${formatNumber(totalRatio, 4)}</strong>
     `;
+  }
+
+  function thiefTechniqueLabel(key, jobType = state.thief?.specs?.jobType || defaults.thief.specs.jobType) {
+    const technique = thiefTechniqueDefsForJob(jobType).find((item) => item.key === key) || thiefTechniqueDefs.find((item) => item.key === key);
+    return technique?.label || "기술";
+  }
+
+  function renderThiefCalibrationSummary(key) {
+    const summary = document.getElementById("thiefCalibrationSummary");
+    const technique = thiefTechniqueDefs.find((item) => item.key === key);
+    if (!summary || !technique) return;
+    const estimate = calculateThiefPracticeConversion(state.thief, technique);
+    summary.innerHTML = `
+      <div class="reverse-output coefficient-output">
+        <span>보정 데미지</span>
+        <strong>${formatNumber(estimate.adjustedDamage)}</strong>
+      </div>
+      <div class="reverse-output coefficient-output">
+        <span>AC가중치</span>
+        <strong>${formatNumber(estimate.acWeight, 4)}</strong>
+      </div>
+      <div class="reverse-output coefficient-output">
+        <span>데미지증가</span>
+        <strong>${formatNumber(estimate.damageIncrease, 4)}</strong>
+      </div>
+      <div class="reverse-output coefficient-output">
+        <span>버프가중치</span>
+        <strong>${formatNumber(estimate.buffWeight, 4)}</strong>
+      </div>
+      <div class="reverse-output coefficient-output">
+        <span>어빌가중치</span>
+        <strong>${formatNumber(estimate.abilityWeight, 4)}</strong>
+      </div>
+      <div class="reverse-output coefficient-output coefficient-result">
+        <span>환산값</span>
+        <strong>${formatNumber(estimate.value, thiefIntegerTechniqueKeys.has(key) ? 0 : 4)}</strong>
+      </div>
+    `;
+  }
+
+  function renderThiefCalibrationDialog(key) {
+    const dialog = document.getElementById("thiefCalibrationDialog");
+    if (!dialog || !key) return;
+    dialog.dataset.thiefCalibrationKey = key;
+    const title = document.getElementById("thiefCalibrationTitle");
+    const content = document.getElementById("thiefCalibrationContent");
+    const entry = getThiefPracticeEntry(key);
+    if (title) title.textContent = `${thiefTechniqueLabel(key)} 데미지 입력`;
+    if (!content) return;
+    content.innerHTML = `
+      <div class="coefficient-layout thief-calibration-layout">
+        <section class="coefficient-group coefficient-input-group thief-calibration-measure-group">
+          <h3>측정값</h3>
+          <div class="reverse-grid coefficient-field-grid">
+            <label class="reverse-field thief-damage-field">
+              <span>허수아비가 입은 데미지</span>
+              <input class="field-control" data-thief-practice-key="damage" type="number" step="any" value="${formatInputValue(entry.damage)}" />
+            </label>
+            <label class="reverse-field">
+              <span>목걸이 추뎀</span>
+              <input class="field-control" data-thief-practice-key="necklaceBonus" type="number" step="any" value="${formatInputValue(entry.necklaceBonus)}" />
+            </label>
+            <label class="reverse-field">
+              <span>속성</span>
+              <select class="field-control" data-thief-practice-key="attackElement">
+                ${crasherElements.map((option) => `<option value="${option}" ${String(entry.attackElement) === String(option) ? "selected" : ""}>${option}</option>`).join("")}
+              </select>
+            </label>
+            <label class="reverse-field">
+              <span>어빌</span>
+              <input class="field-control" data-thief-practice-key="ability" type="number" step="any" value="${formatInputValue(entry.ability)}" />
+            </label>
+          </div>
+        </section>
+        <section class="coefficient-group coefficient-stat-group thief-equipment-group">
+          <h3>장비 조건</h3>
+          <div class="reverse-grid coefficient-field-grid">
+            <label class="reverse-field">
+              <span>무기</span>
+              <input class="field-control" data-thief-practice-key="weapon" type="number" step="any" value="${formatInputValue(entry.weapon)}" />
+            </label>
+            <label class="reverse-field">
+              <span>악세1</span>
+              <input class="field-control" data-thief-practice-key="acc1" type="number" step="any" value="${formatInputValue(entry.acc1)}" />
+            </label>
+            <label class="reverse-field">
+              <span>악세2</span>
+              <input class="field-control" data-thief-practice-key="acc2" type="number" step="any" value="${formatInputValue(entry.acc2)}" />
+            </label>
+            <label class="reverse-field">
+              <span>이펙트</span>
+              <input class="field-control" data-thief-practice-key="extraElement" type="number" step="any" value="${formatInputValue(entry.extraElement)}" />
+            </label>
+            <label class="reverse-field">
+              <span>반지1</span>
+              <input class="field-control" data-thief-practice-key="ring1" type="number" step="any" value="${formatInputValue(entry.ring1)}" />
+            </label>
+            <label class="reverse-field">
+              <span>반지2</span>
+              <input class="field-control" data-thief-practice-key="ring2" type="number" step="any" value="${formatInputValue(entry.ring2)}" />
+            </label>
+          </div>
+        </section>
+        <section class="coefficient-group coefficient-weight-group thief-buff-group">
+          <h3>버프 조건</h3>
+          <div class="reverse-grid coefficient-field-grid">
+            <label class="reverse-field">
+              <span>속강</span>
+              <select class="field-control" data-thief-practice-key="elementBoost">
+                ${onOff.map((option) => `<option value="${option}" ${String(entry.elementBoost) === String(option) ? "selected" : ""}>${option}</option>`).join("")}
+              </select>
+            </label>
+            <label class="reverse-field">
+              <span>움(렙)</span>
+              <input class="field-control" data-thief-practice-key="move" type="number" step="any" value="${formatInputValue(entry.move)}" />
+            </label>
+            <label class="reverse-field">
+              <span>트랩</span>
+              <select class="field-control" data-thief-practice-key="trap">
+                ${onOff.map((option) => `<option value="${option}" ${String(entry.trap) === String(option) ? "selected" : ""}>${option}</option>`).join("")}
+              </select>
+            </label>
+            <label class="reverse-field">
+              <span>나르</span>
+              <select class="field-control" data-thief-practice-key="nar">
+                ${onOff.map((option) => `<option value="${option}" ${String(entry.nar) === String(option) ? "selected" : ""}>${option}</option>`).join("")}
+              </select>
+            </label>
+            <label class="reverse-field">
+              <span>호드/나겔목</span>
+              <select class="field-control" data-thief-practice-key="horde">
+                ${hordeOptions.map((option) => `<option value="${option}" ${String(entry.horde) === String(option) ? "selected" : ""}>${option}</option>`).join("")}
+              </select>
+            </label>
+            <label class="reverse-field">
+              <span>핫타임(%)</span>
+              <input class="field-control" data-thief-practice-key="hotTime" type="number" step="any" value="${formatInputValue(entry.hotTime)}" />
+            </label>
+            <label class="reverse-field">
+              <span>정령 %</span>
+              <input class="field-control" data-thief-practice-key="spirit" type="number" step="any" value="${formatInputValue(entry.spirit)}" />
+            </label>
+          </div>
+        </section>
+        <section class="coefficient-group coefficient-output-group">
+          <h3>계산 결과</h3>
+          <div class="coefficient-output-grid" id="thiefCalibrationSummary"></div>
+        </section>
+      </div>
+    `;
+    renderThiefCalibrationSummary(key);
   }
 
   function renderResults(result) {
@@ -2132,6 +2718,97 @@
                 )}</td>`,
             )
             .join("");
+          return `<tr>
+            <td data-label="몬스터">${row.name}${deleteButton}</td>
+            <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
+            <td data-label="AC변화" class="factor-ac">${formatNumber(row.acChanged, 2)}</td>
+            <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 4)}</td>
+            <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 4)}</td>
+            <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 4)}</td>
+            <td data-label="핫타임" class="factor-hot">${formatHotTimeWeight(row.hotTimeWeight)}</td>
+            <td data-label="퍼센트">${formatNumber(row.percent, 4)}</td>
+            ${damageCells}
+            <td data-label="합계" class="damage-total">${formatNumber(row.totalDamage)}</td>
+            <td data-label="비고">${note}</td>
+          </tr>`;
+        },
+      });
+      return;
+    }
+
+    if (state.skill === "thief") {
+      const isPure = state.thief.specs.jobType === "순도";
+      const damageIncludes = result.damageIncludes || normalizeThiefDamageIncludes(state.thief.damageIncludes);
+      const activeTechniques = thiefTechniqueDefsForJob(state.thief.specs.jobType);
+      const orderedTechniqueHeaders = isPure
+        ? activeTechniques
+        : [
+            activeTechniques.find((technique) => technique.damageKey === "assassin"),
+            activeTechniques.find((technique) => technique.damageKey === "stab1"),
+            activeTechniques.find((technique) => technique.damageKey === "stab2"),
+            activeTechniques.find((technique) => technique.damageKey === "ambush"),
+            activeTechniques.find((technique) => technique.damageKey === "snipe"),
+          ].filter(Boolean);
+      const damageColumnCount = (isPure ? 0 : 2) + activeTechniques.length;
+      const headers = [
+        "몬스터",
+        "기존 AC",
+        "AC변화",
+        "AC가중치",
+        "데미지증가",
+        "버프가중치",
+        "핫타임",
+        "퍼센트",
+        ...orderedTechniqueHeaders.slice(0, 1).map((technique) => renderCrasherDamageHeader(technique.damageKey, technique.label, damageIncludes)),
+        ...(!isPure
+          ? [
+              renderCrasherDamageHeader("mad", "매드", damageIncludes),
+              renderCrasherDamageHeader("crasher", "크래셔", damageIncludes),
+            ]
+          : []),
+        ...orderedTechniqueHeaders.slice(1).map((technique) => renderCrasherDamageHeader(technique.damageKey, technique.label, damageIncludes)),
+        "합계",
+        "비고",
+      ];
+      container.innerHTML = renderGroupedTables(result.rows, {
+        tableClass: "martial-result thief-result",
+        colWidths: [6.4, 5.2, 5.4, 5.8, 6.2, 6.4, 4.2, 5.6, ...Array(damageColumnCount).fill(6.8), 7.4, 8.2],
+        colKinds: [...Array(8).fill(""), ...Array(damageColumnCount).fill("damage"), "", ""],
+        headers,
+        rowRenderer: (row) => {
+          const note =
+            row.custom && row.hp
+              ? shotNote(row.totalDamage, row.hp)
+              : row.kind === "boss"
+              ? row.balrogShot > 0
+                ? `<span class="damage-warn">${formatNumber(row.balrogShot)} 남음</span>`
+                : `<span class="damage-note">발록 샷</span>`
+              : "";
+          const deleteButton = row.custom ? `<button class="delete-monster" type="button" data-monster-id="${row.id}">삭제</button>` : "";
+          const damageCells = [
+            ...orderedTechniqueHeaders.slice(0, 1).map(
+              (technique) =>
+                `<td data-label="${technique.label}" class="damage-strong">${formatIncludedCrasherDamage(
+                  row,
+                  row.damages[technique.damageKey],
+                  damageIncludes[technique.damageKey],
+                )}</td>`,
+            ),
+            ...(!isPure
+              ? [
+                  `<td data-label="매드" class="damage-strong">${formatIncludedCrasherDamage(row, row.damages.mad, damageIncludes.mad)}</td>`,
+                  `<td data-label="크래셔" class="damage-strong">${formatIncludedCrasherDamage(row, row.damages.crasher, damageIncludes.crasher)}</td>`,
+                ]
+              : []),
+            ...orderedTechniqueHeaders.slice(1).map(
+              (technique) =>
+                `<td data-label="${technique.label}" class="damage-strong">${formatIncludedCrasherDamage(
+                  row,
+                  row.damages[technique.damageKey],
+                  damageIncludes[technique.damageKey],
+                )}</td>`,
+            ),
+          ].join("");
           return `<tr>
             <td data-label="몬스터">${row.name}${deleteButton}</td>
             <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
@@ -2382,6 +3059,7 @@
       dummyAttackElement: coefficient.attackElement,
       dummyAcFactors: coefficient.dummyAcFactors,
       dummyBuffFactors: coefficient.dummyBuffFactors,
+      isRecognition: coefficient.isRecognition,
       dummyHotTime: coefficient.dummyHotTime,
       dummySpirit: coefficient.dummySpirit,
     };
@@ -2485,6 +3163,10 @@
               <label class="reverse-check">
                 <input type="checkbox" data-estimate-ability ${coefficient.useAbility ? "checked" : ""} />
                 <span>어빌가중치 적용</span>
+              </label>
+              <label class="reverse-check">
+                <input type="checkbox" data-estimate-recognition ${coefficient.isRecognition ? "checked" : ""} />
+                <span>인식기</span>
               </label>
             </fieldset>
             <fieldset class="reverse-check-group coefficient-check-group">
@@ -2643,6 +3325,13 @@
           </div>
           <div class="reverse-grid reverse-grid-dummy-factors">
             <fieldset class="reverse-check-group">
+              <legend>기술 구분</legend>
+              <label class="reverse-check">
+                <input type="checkbox" data-reverse-recognition ${reverse.isRecognition ? "checked" : ""} />
+                <span>인식기</span>
+              </label>
+            </fieldset>
+            <fieldset class="reverse-check-group">
               <legend>AC가중치 적용</legend>
               ${reverseDummyAcFactors
                 .map(
@@ -2668,7 +3357,7 @@
         </section>
         <section class="reverse-condition-group">
           <h3>공격 대상</h3>
-          <div class="reverse-grid reverse-grid-target">
+          <div class="reverse-grid reverse-grid-target-inputs">
             <label class="reverse-field">
               <span>속성(공방)</span>
               <select class="field-control" data-reverse-key="targetAttackElement">
@@ -2689,6 +3378,8 @@
               <span>정령 %</span>
               <input class="field-control" data-reverse-key="targetSpirit" type="number" step="any" value="${formatInputValue(reverse.targetSpirit)}" />
             </label>
+          </div>
+          <div class="reverse-grid reverse-grid-target-factors">
             <fieldset class="reverse-check-group">
               <legend>버프</legend>
               ${reverseBuffs
@@ -2849,6 +3540,10 @@
       document.getElementById("downFourWayDialog").close();
     });
 
+    document.getElementById("closeThiefCalibrationDialog").addEventListener("click", () => {
+      document.getElementById("thiefCalibrationDialog").close();
+    });
+
     document.getElementById("sectionOrderList").addEventListener("click", (event) => {
       const button = event.target.closest("[data-section-move]");
       if (!button) return;
@@ -2906,6 +3601,8 @@
           skillState.damageIncludes = normalizeCrasherDamageIncludes(skillState.damageIncludes);
         } else if (state.skill === "martial") {
           skillState.damageIncludes = normalizeMartialDamageIncludes(skillState.damageIncludes);
+        } else if (state.skill === "thief") {
+          skillState.damageIncludes = normalizeThiefDamageIncludes(skillState.damageIncludes);
         } else {
           return;
         }
@@ -2942,6 +3639,13 @@
       const dummyImport = event.target.closest("[data-dummy-import]");
       if (dummyImport) {
         importDummySpecsFromSkill(dummyImport.dataset.dummyImport);
+        return;
+      }
+      const thiefCalibration = event.target.closest("[data-open-thief-calibration]");
+      if (thiefCalibration) {
+        renderThiefCalibrationDialog(thiefCalibration.dataset.openThiefCalibration);
+        document.getElementById("thiefCalibrationDialog").showModal();
+        document.querySelector("[data-thief-practice-key]")?.focus();
         return;
       }
       if (!event.target.closest("[data-open-down-fourway]")) return;
@@ -2997,6 +3701,11 @@
         setCoefficientAbility(estimateAbility.checked);
         return;
       }
+      const estimateRecognition = event.target.closest("[data-estimate-recognition]");
+      if (estimateRecognition) {
+        setCoefficientRecognition(estimateRecognition.checked);
+        return;
+      }
       const estimateDummyAc = event.target.closest("[data-estimate-dummy-ac]");
       if (estimateDummyAc) {
         toggleCoefficientDummyFactor("dummyAcFactors", estimateDummyAc.dataset.estimateDummyAc, estimateDummyAc.checked);
@@ -3025,6 +3734,11 @@
       const debuff = event.target.closest("[data-reverse-debuff]");
       if (debuff) {
         toggleReverseDebuff(debuff);
+        return;
+      }
+      const reverseRecognition = event.target.closest("[data-reverse-recognition]");
+      if (reverseRecognition) {
+        setReverseRecognition(reverseRecognition.checked);
         return;
       }
       const input = event.target.closest("[data-reverse-key]");
@@ -3063,6 +3777,53 @@
       event.preventDefault();
       input.blur();
     });
+
+    document.getElementById("thiefCalibrationDialog").addEventListener("input", (event) => {
+      const input = event.target.closest("[data-thief-practice-key]");
+      if (!input) return;
+      const key = document.getElementById("thiefCalibrationDialog").dataset.thiefCalibrationKey;
+      if (!key) return;
+      const fieldKey = input.dataset.thiefPracticeKey;
+      const entry = getThiefPracticeEntry(key);
+      entry[fieldKey] = parseReverseInputValue(input);
+      delete state.thief.convManual[key];
+      saveState();
+      renderThiefCalibrationSummary(key);
+      if (state.skill === "thief") render();
+    });
+
+    document.getElementById("thiefCalibrationDialog").addEventListener("change", (event) => {
+      if (event.target.closest("[data-thief-practice-import], [data-thief-practice-reset]")) return;
+      const input = event.target.closest("[data-thief-practice-key]");
+      if (!input) return;
+      const key = document.getElementById("thiefCalibrationDialog").dataset.thiefCalibrationKey;
+      if (!key) return;
+      const entry = getThiefPracticeEntry(key);
+      entry[input.dataset.thiefPracticeKey] = parseReverseInputValue(input);
+      delete state.thief.convManual[key];
+      saveState();
+      renderThiefCalibrationSummary(key);
+      if (state.skill === "thief") render();
+    });
+
+    document.getElementById("thiefCalibrationDialog").addEventListener("click", (event) => {
+      const resetButton = event.target.closest("[data-thief-practice-reset]");
+      const importButton = event.target.closest("[data-thief-practice-import]");
+      if (!resetButton && !importButton) return;
+      const key = document.getElementById("thiefCalibrationDialog").dataset.thiefCalibrationKey;
+      if (!key) return;
+      if (resetButton) resetThiefPracticeEntry(key);
+      else importThiefPracticeEntry(key);
+    });
+
+    document.getElementById("thiefCalibrationDialog").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter") return;
+      const input = event.target.closest("[data-thief-practice-key]");
+      if (!input) return;
+      event.preventDefault();
+      input.blur();
+    });
+
   }
 
   function commitField(input) {
@@ -3173,6 +3934,13 @@
     render();
   }
 
+  function setCoefficientRecognition(checked) {
+    normalizeDummyState();
+    state.dummy.coefficient.isRecognition = Boolean(checked);
+    saveState();
+    render();
+  }
+
   function toggleCoefficientDummyFactor(listKey, value, checked) {
     normalizeDummyState();
     const coefficient = state.dummy.coefficient;
@@ -3231,9 +3999,17 @@
     render();
   }
 
+  function setReverseRecognition(checked) {
+    const reverse = ensureReverseState();
+    reverse.isRecognition = Boolean(checked);
+    saveState();
+    render();
+  }
+
   globalThis.DamageCalculator = {
     calculateCrasher,
     calculateMartial,
+    calculateThief,
     calculateMeteor,
     calculateDummy,
     calculateReverseDamage,

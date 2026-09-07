@@ -102,7 +102,7 @@ h2 {
 .skill-tabs {
   position: relative;
   display: inline-grid;
-  grid-template-columns: 84px 12px repeat(3, 72px);
+  grid-template-columns: 84px 12px repeat(4, 72px);
   gap: 4px;
   padding: 0;
   border: 0;
@@ -112,7 +112,7 @@ h2 {
 
 .skill-tabs::before {
   content: "";
-  grid-column: 3 / 6;
+  grid-column: 3 / 7;
   grid-row: 1;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -135,8 +135,12 @@ h2 {
   grid-column: 4;
 }
 
-.skill-tab[data-skill="meteor"] {
+.skill-tab[data-skill="thief"] {
   grid-column: 5;
+}
+
+.skill-tab[data-skill="meteor"] {
+  grid-column: 6;
 }
 
 .top-actions {
@@ -518,6 +522,10 @@ td {
 
 .monster-info-dialog {
   width: min(560px, calc(100vw - 28px));
+}
+
+.thief-calibration-dialog {
+  width: min(840px, calc(100vw - 28px));
 }
 
 .ratio-summary {
@@ -1442,6 +1450,52 @@ td.factor-hot {
   gap: 8px;
 }
 
+.thief-calibration-heading-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.thief-dialog-actions {
+  display: flex;
+  align-items: center;
+  justify-content: end;
+  gap: 6px;
+}
+
+.thief-calibration-layout {
+  grid-template-columns: 1fr;
+  grid-template-areas:
+    "measure"
+    "stats"
+    "weights"
+    "outputs";
+}
+
+.thief-calibration-layout .coefficient-field-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.thief-damage-field {
+  border-color: rgba(22, 122, 107, 0.45);
+  background: #eefaf5;
+  box-shadow: inset 0 0 0 1px rgba(22, 122, 107, 0.18);
+}
+
+.thief-damage-field span {
+  color: var(--accent-strong);
+  font-weight: 900;
+}
+
+.thief-damage-field .field-control {
+  min-height: 44px;
+  border-color: rgba(22, 122, 107, 0.5);
+  background: #ffffff;
+  font-size: 1rem;
+  font-weight: 900;
+}
+
 .coefficient-check-group {
   align-content: start;
   min-height: 100%;
@@ -1862,7 +1916,7 @@ td.factor-hot {
 
   .skill-tabs {
     width: 100%;
-    grid-template-columns: minmax(72px, 1.15fr) 10px repeat(3, minmax(0, 1fr));
+    grid-template-columns: minmax(72px, 1.15fr) 10px repeat(4, minmax(0, 1fr));
   }
 
   .top-actions,

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>어둠의전설 데미지 계산기</title>
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=20260906-thief-dialog-actions" />
   </head>
   <body>
     <main class="app-shell">
@@ -28,6 +28,9 @@
             </button>
             <button class="skill-tab" type="button" data-skill="martial" role="tab" aria-selected="false">
               무도가
+            </button>
+            <button class="skill-tab" type="button" data-skill="thief" role="tab" aria-selected="false">
+              도적
             </button>
             <button class="skill-tab" type="button" data-skill="meteor" role="tab" aria-selected="false">
               메테오
@@ -166,6 +169,23 @@
       </form>
     </dialog>
 
+    <dialog class="monster-dialog thief-calibration-dialog" id="thiefCalibrationDialog">
+      <form class="monster-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Thief Skill</p>
+            <h2 id="thiefCalibrationTitle">데미지 입력</h2>
+          </div>
+          <div class="thief-dialog-actions">
+            <button class="section-info-button" type="button" data-thief-practice-reset>리셋</button>
+            <button class="section-info-button" type="button" data-thief-practice-import>불러오기</button>
+            <button class="section-info-button" id="closeThiefCalibrationDialog" type="button">완료</button>
+          </div>
+        </div>
+        <div id="thiefCalibrationContent"></div>
+      </form>
+    </dialog>
+
     <script>
       window.va =
         window.va ||
@@ -174,6 +194,6 @@
         };
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
-    <script src="./app.js"></script>
+    <script src="./app.js?v=20260906-thief-reset-neutral"></script>
   </body>
 </html>
