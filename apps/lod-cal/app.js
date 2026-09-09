@@ -18,6 +18,12 @@
     { value: "암암(반속)", label: "암암" },
     { value: "암방", label: "속암" },
   ];
+  const thiefPracticeElements = [
+    { value: "생암", label: "생공암방" },
+    { value: "암방", label: "속공암방" },
+    { value: "암암(반속)", label: "암공암방" },
+  ];
+  const thiefPracticeElementValues = new Set(thiefPracticeElements.map((option) => option.value));
   const coefficientStats = [
     { key: "str", label: "힘" },
     { key: "con", label: "콘" },
@@ -580,11 +586,16 @@
     return Number(value) || 0;
   }
 
+  function normalizeThiefPracticeElement(value) {
+    const normalized = normalizeElementName(value);
+    return thiefPracticeElementValues.has(normalized) ? normalized : "생암";
+  }
+
   function defaultThiefPracticeEntry(specs = defaults.thief.specs) {
     return {
       damage: 0,
       necklaceBonus: 0,
-      attackElement: specs.elementAttack,
+      attackElement: "생암",
       ability: specs.ability,
       ring1: 0,
       ring2: 0,
@@ -605,7 +616,7 @@
   function importedThiefPracticeEntry(specs = defaults.thief.specs) {
     return {
       ...defaultThiefPracticeEntry(specs),
-      attackElement: specs.elementAttack,
+      attackElement: normalizeThiefPracticeElement(specs.elementAttack),
       ability: specs.ability,
       ring1: specs.ring1,
       ring2: specs.ring2,
@@ -636,7 +647,7 @@
     return {
       ...defaults,
       ...value,
-      attackElement: crasherElements.includes(value.attackElement) ? value.attackElement : defaults.attackElement,
+      attackElement: normalizeThiefPracticeElement(value.attackElement),
       elementBoost: onOff.includes(value.elementBoost) ? value.elementBoost : defaults.elementBoost,
       trap: onOff.includes(value.trap) ? value.trap : defaults.trap,
       nar: onOff.includes(value.nar) ? value.nar : defaults.nar,
@@ -2512,7 +2523,12 @@
             <label class="reverse-field">
               <span>속성</span>
               <select class="field-control" data-thief-practice-key="attackElement">
-                ${crasherElements.map((option) => `<option value="${option}" ${String(entry.attackElement) === String(option) ? "selected" : ""}>${option}</option>`).join("")}
+                ${thiefPracticeElements
+                  .map(
+                    (option) =>
+                      `<option value="${option.value}" ${String(entry.attackElement) === String(option.value) ? "selected" : ""}>${option.label}</option>`,
+                  )
+                  .join("")}
               </select>
             </label>
             <label class="reverse-field">
