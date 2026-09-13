@@ -213,9 +213,9 @@
     { key: "focus", label: "집중", type: "select", options: onOff, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
+    { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
-    { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
   ];
 
   const meteorDefs = [
@@ -243,9 +243,9 @@
     { key: "elementAttack", label: "속성(공방)", type: "select", options: meteorElements, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
+    { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
-    { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
   ];
 
   const martialDefs = [
@@ -277,9 +277,9 @@
     { key: "focus", label: "집중", type: "select", options: focusOptions, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
+    { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
-    { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
   ];
 
   function thiefTechniqueDefsForJob(jobType) {
@@ -329,9 +329,9 @@
       { key: "move", label: "움(렙)", type: "select", options: zeroToSix, factors: ["buff"] },
       { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
       { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
+      { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
       { section: "기타" },
       { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
-      { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
     ];
   }
 
@@ -367,9 +367,9 @@
     { key: "focus", label: "집중", type: "select", options: dummyFocusOptions, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
+    { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
-    { key: "spirit", label: "정령", type: "number", factors: ["spirit"] },
   ];
 
   const defaults = {
@@ -1278,7 +1278,8 @@
     const entry = normalizeThiefPracticeEntry(skillState?.thiefPractice?.[technique.key], skillState?.specs || defaults.thief.specs);
     const damage = Number(entry.damage) || 0;
     const necklaceBonus = Number(entry.necklaceBonus) || 0;
-    const adjustedDamage = Math.max(0, damage - necklaceBonus);
+    const appliedNecklaceBonus = normalizeElementName(entry.attackElement) === "생암" ? necklaceBonus : 0;
+    const adjustedDamage = Math.max(0, damage - appliedNecklaceBonus);
     const c = {
       ability: abilityCoefficient(entry.ability),
       ring1: equipLevel(entry.ring1, 1),
@@ -1297,15 +1298,15 @@
     const acChanged = 100 + c.ring1 + c.ring2;
     const acWeight = defenseRate(acChanged);
     const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-    const buffWeight = buffWeightWithElement(c.elementAttack, c.move + c.trap + c.nar);
+    const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, (Number(entry.spirit) || 0) / 100);
     const hotTimeWeight = 1 + (Number(entry.hotTime) || 0) / 100;
-    const spiritWeight = 1 + (Number(entry.spirit) || 0) / 100;
     const acPower = technique.recognition ? 2 : 1;
-    const divisor = acWeight ** acPower * damageIncrease * buffWeight * hotTimeWeight * spiritWeight * c.ability;
+    const divisor = acWeight ** acPower * damageIncrease * buffWeight * hotTimeWeight * c.ability;
     return {
       value: divisor > 0 ? adjustedDamage / divisor : 0,
       damage,
       necklaceBonus,
+      appliedNecklaceBonus,
       adjustedDamage,
       abilityWeight: c.ability,
       acChanged,
@@ -1313,7 +1314,6 @@
       damageIncrease,
       buffWeight,
       hotTimeWeight,
-      spiritWeight,
       divisor,
       isRecognition: Boolean(technique.recognition),
     };
@@ -1328,6 +1328,14 @@
     return elementValue > 0 && elementValue < 1
       ? elementValue * (1 + additiveBuffs)
       : elementValue + additiveBuffs;
+  }
+
+  function buffWeightWithSpirit(elementValue, additiveBuffs, spiritBonus = 0) {
+    return buffWeightWithElement(elementValue, additiveBuffs + (Number(spiritBonus) || 0));
+  }
+
+  function dummyLifeFlatBonus(monster, elementAttack, flatBonus) {
+    return monster.kind === "dummy" && normalizeElementName(elementAttack) === "생암" ? flatBonus : 0;
   }
 
   function downFourWayRatio(values = {}) {
@@ -1453,21 +1461,19 @@
       const acChanged =
         monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const buffWeight = buffWeightWithElement(c.elementAttack, c.move + c.focus + c.trap + c.nar);
+      const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spirit);
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const percentWithoutFocus = acWeight * damageIncrease * (buffWeight - c.focus);
       const base = Number(s.basePhysical) || 0;
       const flat = c.flatPhysical;
-      const flatBonusElements = new Set(["생암", "생(암)공"]);
-      const appliesFlatBonus = flatBonusElements.has(normalizeElementName(s.elementAttack)) && monster.kind !== "boss";
+      const appliesFlatBonus = monster.kind === "dummy" && normalizeElementName(s.elementAttack) === "생암";
       const useHot = monster.kind !== "boss";
       const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
-      const spiritWeight = 1 + c.spirit;
       const bossRate = monster.kind === "boss" ? bossCrasherRate(s.jobType) : 1;
-      const mad = (base * c.madType * percent * hotTimeWeight + flatBonus) * spiritWeight;
-      const crasher = ((base * c.jobType * percent * hotTimeWeight + flatBonus) * bossRate) * spiritWeight;
+      const mad = base * c.madType * percent * hotTimeWeight + flatBonus;
+      const crasher = base * c.jobType * percent * hotTimeWeight * bossRate + flatBonus;
       const skillBase =
         acWeight *
         damageIncrease *
@@ -1475,13 +1481,13 @@
         (Number(s.str) || 0) *
         (Number(s.con) || 0) *
         hotTimeWeight;
-      const fury = (skillBase * c.furyLevel + flatBonus) * spiritWeight;
+      const fury = skillBase * c.furyLevel + flatBonus;
       const jobSkillName = isPureJob ? "대쉬" : "암살";
-      const downFourWayDamage = fury * c.downFourWayLevel;
+      const downFourWayDamage = skillBase * c.furyLevel * c.downFourWayLevel + flatBonus;
       const jobSkillDamage = usesJobSkill
         ? isPureJob
-          ? ((skillBase * c.dashLevel + flatBonus) * spiritWeight) * c.dashStacks
-          : (base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight
+          ? skillBase * c.dashLevel * c.dashStacks + flatBonus
+          : base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus
         : 0;
       const totalDamage =
         (damageIncludes.mad ? mad : 0) +
@@ -1498,7 +1504,6 @@
         damageIncrease,
         buffWeight,
         hotTimeWeight,
-        spiritWeight,
         percent,
         mad,
         crasher,
@@ -1558,7 +1563,7 @@
       const acChanged =
         monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const buffWeight = buffWeightWithElement(c.elementAttack, c.move + c.focus + c.trap + c.nar);
+      const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spirit);
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const hotTimeWeight = monster.kind !== "boss" ? 1 + c.hotTime : 1;
@@ -1569,19 +1574,17 @@
         (Number(s.str) || 0) *
         (Number(s.con) || 0) *
         hotTimeWeight;
-      const spiritWeight = 1 + c.spirit;
       const currentHp = Number(s.basePhysical) || 0;
       const fullMana = Number(s.baseMagic) || 0;
       const selectedMana = inputState.daraManaMode === "1틱" ? c.oneTick : fullMana;
-      const flatBonusElements = new Set(["생암", "생(암)공"]);
-      const flatBonus = flatBonusElements.has(normalizeElementName(s.elementAttack)) && monster.kind !== "boss" ? c.flatPhysical : 0;
+      const flatBonus = dummyLifeFlatBonus(monster, s.elementAttack, c.flatPhysical);
       const damages = martialTechniqueDefs.reduce((acc, technique) => {
         if (technique.key === "daraLevel") {
-          acc[technique.damageKey] = (Math.max(0, currentHp + selectedMana - 1440) * c.daraLevel * percent * hotTimeWeight + flatBonus) * spiritWeight;
+          acc[technique.damageKey] = Math.max(0, currentHp + selectedMana - 1440) * c.daraLevel * percent * hotTimeWeight + flatBonus;
         } else if (technique.key === "guyangLevel") {
-          acc[technique.damageKey] = (currentHp * c.guyangLevel * percent * hotTimeWeight + flatBonus) * spiritWeight;
+          acc[technique.damageKey] = currentHp * c.guyangLevel * percent * hotTimeWeight + flatBonus;
         } else {
-          acc[technique.damageKey] = (skillBase * c[technique.key] + flatBonus) * spiritWeight;
+          acc[technique.damageKey] = skillBase * c[technique.key] + flatBonus;
         }
         return acc;
       }, {});
@@ -1598,7 +1601,6 @@
         damageIncrease,
         buffWeight,
         hotTimeWeight,
-        spiritWeight,
         percent,
         damages,
         totalDamage,
@@ -1650,11 +1652,10 @@
     const acChangedDummy = 100 + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
     const dummyAcWeight = defenseRate(acChangedDummy);
     const dummyDamageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-    const dummyBuffWeight = buffWeightWithElement(c.elementAttack, c.move + c.trap + c.nar);
+    const dummyBuffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, c.spirit);
     const dummyHotTimeWeight = 1 + c.hotTime;
-    const dummySpiritWeight = 1 + c.spirit;
-    const dummyDivisor = dummyAcWeight * dummyDamageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
-    const dummyRecognitionDivisor = dummyAcWeight * dummyAcWeight * dummyDamageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
+    const dummyDivisor = dummyAcWeight * dummyDamageIncrease * dummyBuffWeight * dummyHotTimeWeight;
+    const dummyRecognitionDivisor = dummyAcWeight * dummyAcWeight * dummyDamageIncrease * dummyBuffWeight * dummyHotTimeWeight;
     for (const technique of thiefTechniqueDefs) {
       c[technique.key] =
         technique.key === "assassinLevel"
@@ -1667,27 +1668,25 @@
     const rows = monsterRows.map((monster) => {
       const acChanged = monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
       const rowDamageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const rowBuffWeight = buffWeightWithElement(c.elementAttack, c.move + c.trap + c.nar);
+      const rowBuffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, c.spirit);
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * rowDamageIncrease * rowBuffWeight;
       const recognitionPercent = acWeight * acWeight * rowDamageIncrease * rowBuffWeight;
       const percentWithoutFocus = acWeight * rowDamageIncrease * rowBuffWeight;
       const hotTimeWeight = monster.kind !== "boss" ? 1 + c.hotTime : 1;
-      const spiritWeight = 1 + c.spirit;
+      const base = Number(s.basePhysical) || 0;
+      const flatBonus = dummyLifeFlatBonus(monster, s.elementAttack, c.flatPhysical);
       const damages = activeTechniques.reduce((acc, technique) => {
         const rowPercent = technique.recognition ? recognitionPercent : percent;
-        acc[technique.damageKey] = c[technique.key] * c.ability * rowPercent * hotTimeWeight * spiritWeight;
+        acc[technique.damageKey] = c[technique.key] * c.ability * rowPercent * hotTimeWeight + flatBonus;
         return acc;
       }, {});
-      const base = Number(s.basePhysical) || 0;
-      const flatBonusElements = new Set(["생암", "생(암)공"]);
-      const flatBonus = flatBonusElements.has(normalizeElementName(s.elementAttack)) && monster.kind !== "boss" ? c.flatPhysical : 0;
       if (!isPure) {
-        damages.assassin = (base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight;
-        damages.mad = (base * 0.1 * 0.5 * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight;
-        damages.crasher = (base * 2 * percent * hotTimeWeight + flatBonus) * spiritWeight;
+        damages.assassin = base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus;
+        damages.mad = base * 0.1 * 0.5 * percentWithoutFocus * hotTimeWeight + flatBonus;
+        damages.crasher = base * 2 * percent * hotTimeWeight + flatBonus;
       } else {
-        damages.assassin = (base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus) * spiritWeight;
+        damages.assassin = base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus;
       }
       const includedKeys = isPure
         ? ["assassin", "stab1", "stab2", "ambush", "snipe", "backstep"]
@@ -1705,7 +1704,6 @@
         damageIncrease: rowDamageIncrease,
         buffWeight: rowBuffWeight,
         hotTimeWeight,
-        spiritWeight,
         percent,
         damages,
         totalDamage,
@@ -1759,10 +1757,9 @@
     const acChanged = 100 + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
     const acWeight = defenseRate(acChanged);
     const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-    const buffWeight = buffWeightWithElement(c.elementAttack, c.move + c.focus + c.trap + c.nar);
+    const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spirit);
     const hotTimeWeight = 1 + c.hotTime;
-    const spiritWeight = 1 + c.spirit;
-    const percent = acWeight * damageIncrease * buffWeight * hotTimeWeight * spiritWeight;
+    const percent = acWeight * damageIncrease * buffWeight * hotTimeWeight;
     const row = {
       section: "허수아비",
       name: "허수아비 입력값",
@@ -1772,7 +1769,6 @@
       damageIncrease,
       buffWeight,
       hotTimeWeight,
-      spiritWeight,
       percent,
     };
     return { conversions: c, specs: s, rows: [row], factorSummary: buildFactorSummary([row], c, "dummy") };
@@ -1843,16 +1839,15 @@
         c.abre +
         c.ambush;
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const buffWeight = buffWeightWithElement(c.elementAttack, c.focus + c.trap + c.nar);
+      const buffWeight = buffWeightWithSpirit(c.elementAttack, c.focus + c.trap + c.nar, c.spirit);
       const hotTimeWeight = 1 + c.hotTime;
-      const spiritWeight = 1 + c.spirit;
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const castManaCost = c.castMana * c.manaReduction;
       const baseMagic = Number(s.baseMagic) || 0;
       const cappedMana = (mana) => Math.min(Number(mana) || 0, baseMagic);
       const meteorDamage = (mana) =>
-        (cappedMana(mana) - castManaCost) * 1.5 * percent * hotTimeWeight * spiritWeight;
+        (cappedMana(mana) - castManaCost) * 1.5 * percent * hotTimeWeight;
       const oneTickOneMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi);
       const twoTickOneMediDamage = meteorDamage(resolvedSpecs.oneTick * 2 + c.meditation);
       const twoTickTwoMediDamage = meteorDamage(resolvedSpecs.oneTickPlusMedi * 2);
@@ -1864,7 +1859,6 @@
         damageIncrease,
         buffWeight,
         hotTimeWeight,
-        spiritWeight,
         percent,
         oneTickOneMediDamage,
         twoTickOneMediDamage,
@@ -1882,7 +1876,6 @@
     const hotValues = rows.map((row) => row.hotTimeWeight);
     const minHot = Math.min(...hotValues);
     const maxHot = Math.max(...hotValues);
-    const spiritWeight = firstRow.spiritWeight ?? 1;
     const acChangeTotal =
       skill === "crasher"
         ? conversions.ring1 + conversions.ring2 + conversions.curse + conversions.arc + conversions.abre + conversions.ambush
@@ -1893,10 +1886,10 @@
         : ["반지1", "반지2", "저주", "아크", "아브", "기습"];
     const buffFactors =
       skill === "thief"
-        ? ["속강", "속성(공방)", "움", "트랩", "나르", "이펙트", "호드/나겔목"]
+        ? ["속강", "속성(공방)", "움", "트랩", "나르", "정령", "이펙트", "호드/나겔목"]
         : physicalSkillKeys.has(skill)
-          ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "이펙트", "호드/나겔목"]
-          : ["속강", "속성(공방)", "트랩", "나르", "이펙트", "호드/나겔목"];
+          ? ["속강", "속성(공방)", "움", "집중", "트랩", "나르", "정령", "이펙트", "호드/나겔목"]
+          : ["속강", "속성(공방)", "트랩", "나르", "정령", "이펙트", "호드/나겔목"];
     return [
       {
         key: "ac",
@@ -1930,13 +1923,6 @@
               : `${formatNumber(minHot, 2)} ~ ${formatNumber(maxHot, 2)}`,
         sub: "최종 데미지 곱",
         factors: ["핫타임"],
-      },
-      {
-        key: "spirit",
-        label: "정령",
-        value: spiritWeight === 1 ? "-" : formatNumber(spiritWeight, 4),
-        sub: "최종 데미지 곱",
-        factors: ["정령"],
       },
     ];
   }
@@ -2068,23 +2054,26 @@
       (selectedDummyBuffFactors.has("focus") ? result.conversions.focus || 0 : 0) +
       (selectedDummyBuffFactors.has("trap") ? result.conversions.trap || 0 : 0) +
       (selectedDummyBuffFactors.has("nar") ? result.conversions.nar || 0 : 0);
-    const dummyBuffWeight = buffWeightWithElement(dummyElementValue, dummyBuffAdditive);
+    const dummyBuffWeight = buffWeightWithSpirit(
+      dummyElementValue,
+      dummyBuffAdditive,
+      (Number(reverse.dummySpirit) || 0) / 100,
+    );
     const dummyHotTimeWeight = 1 + (Number(reverse.dummyHotTime) || 0) / 100;
-    const dummySpiritWeight = 1 + (Number(reverse.dummySpirit) || 0) / 100;
     const acPower = reverse.isRecognition ? 2 : 1;
-    const originalDivider = dummyAcWeight ** acPower * damageIncrease * dummyBuffWeight * dummyHotTimeWeight * dummySpiritWeight;
+    const originalDivider = dummyAcWeight ** acPower * damageIncrease * dummyBuffWeight * dummyHotTimeWeight;
     const baseBuffWeight = targetElementBuffWeight || 1;
     const targetFocusWeight = state.skill === "dummy" || sourceSkill === "martial" ? result.conversions.focus || 0 : 1;
     const selectedBuffWeight =
       baseBuffWeight +
       (selectedTargetBuffs.has("집중") ? targetFocusWeight : 0) +
       (selectedTargetBuffs.has("나르") ? 1 : 0) +
-      (selectedTargetBuffs.has("트랩") ? 1 : 0);
+      (selectedTargetBuffs.has("트랩") ? 1 : 0) +
+      (Number(reverse.targetSpirit) || 0) / 100;
     const debuffTotal = reverseDebuffTotal(reverse.debuffs, targetAc, targetElementDebuffValue);
     const targetAcWeight = defenseRate(targetAc);
     const targetHotTimeWeight = 1 + (Number(reverse.targetHotTime) || 0) / 100;
-    const targetSpiritWeight = 1 + (Number(reverse.targetSpirit) || 0) / 100;
-    const targetPercent = targetAcWeight ** acPower * damageIncrease * (selectedBuffWeight / debuffTotal) * targetHotTimeWeight * targetSpiritWeight;
+    const targetPercent = targetAcWeight ** acPower * damageIncrease * (selectedBuffWeight / debuffTotal) * targetHotTimeWeight;
     const originalDamage = originalDivider ? dummyDamage / originalDivider : 0;
 
     return {
@@ -2096,12 +2085,10 @@
       dummyAcWeight,
       dummyBuffWeight,
       dummyHotTimeWeight,
-      dummySpiritWeight,
       originalDivider,
       targetPercent,
       selectedBuffWeight,
       targetHotTimeWeight,
-      targetSpiritWeight,
       elementDebuffValue: targetElementDebuffValue,
       debuffTotal,
       isRecognition: reverse.isRecognition,
@@ -3068,7 +3055,8 @@
     const coefficient = state.dummy.coefficient || defaultDummyState().coefficient;
     const damage = Number(coefficient.damage) || 0;
     const necklaceBonus = Number(coefficient.necklaceBonus) || 0;
-    const adjustedDamage = Math.max(0, damage - necklaceBonus);
+    const appliedNecklaceBonus = normalizeElementName(coefficient.attackElement) === "생암" ? necklaceBonus : 0;
+    const adjustedDamage = Math.max(0, damage - appliedNecklaceBonus);
     const reverse = {
       ...state.dummy.reverse,
       dummyDamage: adjustedDamage,
@@ -3088,6 +3076,7 @@
       statBase,
       abilityWeight,
       necklaceBonus,
+      appliedNecklaceBonus,
       adjustedDamage,
       denominator,
       coefficient: denominator ? calculation.originalDamage / denominator : 0,
