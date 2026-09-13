@@ -3864,6 +3864,11 @@
         skillState.convManual[key] = parseInputValue(input);
       }
       saveState();
+      if (state.skill !== "dummy") {
+        const result = getCurrentResult();
+        renderResults(result);
+        renderSummary(result);
+      }
   }
 
   function parseReverseInputValue(input) {
