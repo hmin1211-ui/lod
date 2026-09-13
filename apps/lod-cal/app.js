@@ -92,6 +92,7 @@
   const martialInputTechniqueDefs = martialTechniqueDefs.filter((technique) => technique.type !== "fixed");
   const thiefAssassinOptions = [0.375, 1];
   const thiefPureAssassinOptions = [0.7, 1.05, 1.4, 1.75, 2.45];
+  const thiefAssassinDefaults = { 순도: 1.05, 전도: 0.375 };
   const thiefTechniqueDefs = [
     { key: "assassinLevel", damageKey: "assassin", label: "암살", pureLabel: "암살진", type: "select" },
     { key: "stab1Level", damageKey: "stab1", label: "찔러1", type: "number" },
@@ -453,7 +454,7 @@
         con: 180,
         dex: 180,
         damage: 0,
-        assassinLevel: 0.7,
+        assassinLevel: 1.05,
         stab1Level: 0,
         stab2Level: 0,
         ambushLevel: 0,
@@ -537,7 +538,9 @@
       resultFontScale: 100,
       ...(skill === "crasher" ? { damageIncludes: defaultCrasherDamageIncludes() } : {}),
       ...(skill === "martial" ? { damageIncludes: defaultMartialDamageIncludes(), daraManaMode: defaults.martial.daraManaMode } : {}),
-      ...(skill === "thief" ? { damageIncludes: defaultThiefDamageIncludes(), thiefPractice: {} } : {}),
+      ...(skill === "thief"
+        ? { damageIncludes: defaultThiefDamageIncludes(), thiefPractice: {}, assassinByJob: { ...thiefAssassinDefaults } }
+        : {}),
     };
   }
 
@@ -578,6 +581,33 @@
       acc[key] = value[key] !== false;
       return acc;
     }, {});
+  }
+
+  function assassinOptionsForJob(jobType) {
+    return jobType === "순도" ? thiefPureAssassinOptions : thiefAssassinOptions;
+  }
+
+  function normalizeThiefAssassinByJob(value = {}) {
+    return thiefJobTypes.reduce((profiles, jobType) => {
+      const candidate = Number(value?.[jobType]);
+      profiles[jobType] = assassinOptionsForJob(jobType).includes(candidate)
+        ? candidate
+        : thiefAssassinDefaults[jobType];
+      return profiles;
+    }, {});
+  }
+
+  function switchThiefJobType(jobType) {
+    const skillState = state.thief;
+    const previousJob = thiefJobTypes.includes(skillState.specs.jobType) ? skillState.specs.jobType : "순도";
+    const profiles = normalizeThiefAssassinByJob(skillState.assassinByJob);
+    const previousValue = Number(skillState.specs.assassinLevel);
+    if (assassinOptionsForJob(previousJob).includes(previousValue)) {
+      profiles[previousJob] = previousValue;
+    }
+    skillState.assassinByJob = profiles;
+    skillState.specs.jobType = thiefJobTypes.includes(jobType) ? jobType : previousJob;
+    skillState.specs.assassinLevel = profiles[skillState.specs.jobType];
   }
 
   function hotTimePercent(value) {
@@ -842,6 +872,7 @@
       state[skill].reverse = { ...state[skill].reverse, ...(saved[skill].reverse || {}) };
       state[skill].downFourWay = { ...state[skill].downFourWay, ...(saved[skill].downFourWay || {}) };
       state[skill].thiefPractice = { ...(state[skill].thiefPractice || {}), ...(saved[skill].thiefPractice || {}) };
+      state[skill].assassinByJob = { ...(state[skill].assassinByJob || {}), ...(saved[skill].assassinByJob || {}) };
       state[skill].dashStacks = saved[skill].dashStacks;
       state[skill].resultFontScale = saved[skill].resultFontScale;
       if (skill === "crasher") {
@@ -908,6 +939,13 @@
       if (!thiefJobTypes.includes(skillState.specs.jobType)) {
         skillState.specs.jobType = defaults.thief.specs.jobType;
       }
+      const savedProfiles = normalizeThiefAssassinByJob(skillState.assassinByJob);
+      const currentAssassin = Number(skillState.specs.assassinLevel);
+      if (!Object.prototype.hasOwnProperty.call(skillState.assassinByJob || {}, skillState.specs.jobType) && assassinOptionsForJob(skillState.specs.jobType).includes(currentAssassin)) {
+        savedProfiles[skillState.specs.jobType] = currentAssassin;
+      }
+      skillState.assassinByJob = savedProfiles;
+      skillState.specs.assassinLevel = savedProfiles[skillState.specs.jobType];
       skillState.thiefPractice = normalizeThiefPracticeState(skillState);
     }
     if (skillState.specs.horde === "On") {
@@ -3837,7 +3875,9 @@
       const key = input.dataset.key;
       clearMeteorDerivedManuals(key);
       clearCrasherSkillConversionManuals(key);
-      if (input.dataset.kind === "spec") {
+      if (state.skill === "thief" && input.dataset.kind === "spec" && key === "jobType") {
+        switchThiefJobType(input.value);
+      } else if (input.dataset.kind === "spec") {
         skillState.specs[key] = parseInputValue(input);
         skillState.specManual[key] = true;
         if (key !== "basePhysical") {
@@ -3855,7 +3895,9 @@
       const key = input.dataset.key;
       clearMeteorDerivedManuals(key);
       clearCrasherSkillConversionManuals(key);
-      if (input.dataset.kind === "spec") {
+      if (state.skill === "thief" && input.dataset.kind === "spec" && key === "jobType") {
+        switchThiefJobType(input.value);
+      } else if (input.dataset.kind === "spec") {
         skillState.specs[key] = parseInputValue(input);
         skillState.specManual[key] = true;
         if (key !== "basePhysical") {
