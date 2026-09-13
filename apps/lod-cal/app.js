@@ -1338,11 +1338,11 @@
     return monster.kind === "dummy" && normalizeElementName(elementAttack) === "생암" ? flatBonus : 0;
   }
 
-  function downFourWayRatio(values = {}) {
-    const furyDamage = Number(values.furyDamage) || 0;
+  function downFourWayRatio(values = {}, flatBonus = 0) {
+    const furyDamage = Math.max(0, (Number(values.furyDamage) || 0) - flatBonus);
     if (!furyDamage) return 0;
-    const fourWayRatio = (Number(values.fourWayDamage) || 0) / furyDamage;
-    const downRatio = (Number(values.downDamage) || 0) / furyDamage;
+    const fourWayRatio = Math.max(0, (Number(values.fourWayDamage) || 0) - flatBonus) / furyDamage;
+    const downRatio = Math.max(0, (Number(values.downDamage) || 0) - flatBonus) / furyDamage;
     return fourWayRatio + downRatio;
   }
 
@@ -1436,7 +1436,8 @@
       "dashLevel",
       dashCoefficient(s.dashLevel) * (s.dashLevel === "업글" ? c.ability : 1),
     );
-    c.downFourWayLevel = applyManual(inputState, "downFourWayLevel", downFourWayRatio(inputState.downFourWay));
+    const downFourWayFlatBonus = normalizeElementName(s.elementAttack) === "생암" ? c.flatPhysical : 0;
+    c.downFourWayLevel = applyManual(inputState, "downFourWayLevel", downFourWayRatio(inputState.downFourWay, downFourWayFlatBonus));
     c.dashStacks = clampInt(inputState.dashStacks, 1, 6, 1);
     c.curse = applyManual(inputState, "curse", curseValueCrasher[s.curse] ?? 0);
     c.arc = applyManual(inputState, "arc", (Number(s.arc) || 0) * 13);
@@ -1483,7 +1484,7 @@
         hotTimeWeight;
       const fury = skillBase * c.furyLevel + flatBonus;
       const jobSkillName = isPureJob ? "대쉬" : "암살";
-      const downFourWayDamage = skillBase * c.furyLevel * c.downFourWayLevel + flatBonus;
+      const downFourWayDamage = skillBase * c.furyLevel * c.downFourWayLevel + flatBonus * 2;
       const jobSkillDamage = usesJobSkill
         ? isPureJob
           ? skillBase * c.dashLevel * c.dashStacks + flatBonus
