@@ -906,6 +906,43 @@ td.factor-hot {
   background: linear-gradient(90deg, rgba(15, 118, 110, 0.08), transparent 46%);
 }
 
+.spirit-level-control {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.spirit-level-control > span,
+.spirit-derived-note {
+  color: var(--spirit);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.spirit-level-control .field-control {
+  min-width: 0;
+}
+
+.spirit-conversion {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  color: var(--spirit);
+}
+
+.spirit-conversion > span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.spirit-conversion > strong {
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
 .input-factor-ac {
   background: linear-gradient(90deg, rgba(37, 99, 235, 0.08), transparent 46%);
 }

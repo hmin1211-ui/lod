@@ -214,7 +214,8 @@
     { key: "focus", label: "집중", type: "select", options: onOff, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
-    { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
+    { key: "spiritLevel", label: "정령레벨", type: "spiritLevel", factors: ["buff"] },
+    { key: "spiritDamage", label: "", type: "spiritDamage" },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
   ];
@@ -278,7 +279,8 @@
     { key: "focus", label: "집중", type: "select", options: focusOptions, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
-    { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
+    { key: "spiritLevel", label: "정령레벨", type: "spiritLevel", factors: ["buff"] },
+    { key: "spiritDamage", label: "", type: "spiritDamage" },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
   ];
@@ -330,7 +332,8 @@
       { key: "move", label: "움(렙)", type: "select", options: zeroToSix, factors: ["buff"] },
       { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
       { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
-      { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
+      { key: "spiritLevel", label: "정령레벨", type: "spiritLevel", factors: ["buff"] },
+      { key: "spiritDamage", label: "", type: "spiritDamage" },
       { section: "기타" },
       { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
     ];
@@ -368,7 +371,8 @@
     { key: "focus", label: "집중", type: "select", options: dummyFocusOptions, factors: ["buff"] },
     { key: "trap", label: "트랩", type: "select", options: onOff, factors: ["buff"] },
     { key: "nar", label: "나르", type: "select", options: onOff, factors: ["buff"] },
-    { key: "spirit", label: "정령", type: "number", factors: ["buff"] },
+    { key: "spiritLevel", label: "정령레벨", type: "spiritLevel", factors: ["buff"] },
+    { key: "spiritDamage", label: "", type: "spiritDamage" },
     { section: "기타" },
     { key: "hotTime", label: "핫타임", type: "select", options: hotTimes, factors: ["hot"] },
   ];
@@ -383,7 +387,6 @@
         downFourWayLevel: 0,
         ability: 201,
         basePhysical: 1000000,
-        str: 180,
         con: 180,
         ring1: 0,
         ring2: 0,
@@ -436,7 +439,7 @@
         trap: "Off",
         nar: "Off",
         hotTime: "Off",
-        spirit: 0,
+        spiritLevel: 0,
         extraElement: 0,
         horde: "Off",
       },
@@ -476,7 +479,7 @@
         trap: "Off",
         nar: "Off",
         hotTime: "Off",
-        spirit: 0,
+        spiritLevel: 0,
         extraElement: 0,
         horde: "Off",
       },
@@ -627,6 +630,7 @@
       necklaceBonus: 0,
       attackElement: "생암",
       ability: specs.ability,
+      str: specs.str,
       ring1: 0,
       ring2: 0,
       weapon: 0,
@@ -639,7 +643,7 @@
       extraElement: 0,
       horde: "Off",
       hotTime: 0,
-      spirit: 0,
+      spiritLevel: 0,
     };
   }
 
@@ -648,6 +652,7 @@
       ...defaultThiefPracticeEntry(specs),
       attackElement: normalizeThiefPracticeElement(specs.elementAttack),
       ability: specs.ability,
+      str: specs.str,
       ring1: specs.ring1,
       ring2: specs.ring2,
       weapon: specs.weapon,
@@ -660,7 +665,7 @@
       extraElement: specs.extraElement,
       horde: specs.horde,
       hotTime: hotTimePercent(specs.hotTime),
-      spirit: specs.spirit,
+      spiritLevel: specs.spiritLevel,
     };
   }
 
@@ -754,7 +759,6 @@
     return {
       ability: 201,
       basePhysical: 1000000,
-      baseMagic: 1000000,
       weaponMin: 0,
       weaponMax: 0,
       str: 180,
@@ -778,7 +782,7 @@
       trap: "Off",
       nar: "Off",
       hotTime: "Off",
-      spirit: 0,
+        spiritLevel: 0,
       extraElement: 0,
       horde: "Off",
     };
@@ -844,7 +848,7 @@
 
   function snapshotState() {
     return {
-      version: 1,
+      version: 2,
       savedAt: new Date().toISOString(),
       skill: state.skill,
       crasher: state.crasher,
@@ -888,7 +892,7 @@
         state[skill].damageIncludes = normalizeThiefDamageIncludes(saved[skill].damageIncludes);
         state[skill].thiefPractice = normalizeThiefPracticeState(state[skill]);
       }
-      migrateSavedSkillState(skill);
+      migrateSavedSkillState(skill, Number(saved.version || 0) < 2);
     }
     if (saved.dummy) {
       state.dummy = { ...defaultDummyState(), ...saved.dummy };
@@ -896,6 +900,14 @@
       state.dummy.specManual = { ...(saved.dummy.specManual || {}) };
       state.dummy.convManual = { ...(saved.dummy.convManual || {}) };
       state.dummy.coefficient = { ...defaultDummyState().coefficient, ...(saved.dummy.coefficient || {}) };
+      if (Number(saved.version || 0) < 2) {
+        state.dummy.specs.spiritLevel = 0;
+        state.dummy.reverse.dummySpirit = 0;
+        state.dummy.reverse.targetSpirit = 0;
+        state.dummy.coefficient.dummySpirit = 0;
+      }
+      delete state.dummy.specs.spirit;
+      delete state.dummy.convManual.spirit;
     } else {
       const sourceSkill = skillKeys.includes(saved.skill) ? saved.skill : "martial";
       state.dummy = {
@@ -908,8 +920,25 @@
     return true;
   }
 
-  function migrateSavedSkillState(skill) {
+  function migrateSavedSkillState(skill, resetLegacySpirit = false) {
     const skillState = state[skill];
+    if (skill === "meteor") {
+      if (!Object.prototype.hasOwnProperty.call(skillState.specs, "spirit")) {
+        skillState.specs.spirit = 0;
+      }
+      delete skillState.specs.spiritLevel;
+      delete skillState.convManual.spiritLevel;
+    } else if (resetLegacySpirit) {
+      skillState.specs.spiritLevel = 0;
+      if (skillState.reverse) {
+        skillState.reverse.dummySpirit = 0;
+        skillState.reverse.targetSpirit = 0;
+      }
+    }
+    if (skill !== "meteor") {
+      delete skillState.specs.spirit;
+      delete skillState.convManual.spirit;
+    }
     if (skill === "crasher" && skillState.specs.jobType === "전직") {
       skillState.specs.jobType = "도전";
     }
@@ -1317,7 +1346,8 @@
     const damage = Number(entry.damage) || 0;
     const necklaceBonus = Number(entry.necklaceBonus) || 0;
     const appliedNecklaceBonus = normalizeElementName(entry.attackElement) === "생암" ? necklaceBonus : 0;
-    const adjustedDamage = Math.max(0, damage - appliedNecklaceBonus);
+    const spirit = spiritEffects(entry.spiritLevel, entry.str);
+    const adjustedDamage = Math.max(0, damage - appliedNecklaceBonus - spirit.damage);
     const c = {
       ability: abilityCoefficient(entry.ability),
       ring1: equipLevel(entry.ring1, 1),
@@ -1336,7 +1366,7 @@
     const acChanged = 100 + c.ring1 + c.ring2;
     const acWeight = defenseRate(acChanged);
     const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-    const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, (Number(entry.spirit) || 0) / 100);
+    const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, spirit.powerRatio);
     const hotTimeWeight = 1 + (Number(entry.hotTime) || 0) / 100;
     const acPower = technique.recognition ? 2 : 1;
     const divisor = acWeight ** acPower * damageIncrease * buffWeight * hotTimeWeight * c.ability;
@@ -1352,6 +1382,7 @@
       damageIncrease,
       buffWeight,
       hotTimeWeight,
+      spirit,
       divisor,
       isRecognition: Boolean(technique.recognition),
     };
@@ -1370,6 +1401,28 @@
 
   function buffWeightWithSpirit(elementValue, additiveBuffs, spiritBonus = 0) {
     return buffWeightWithElement(elementValue, additiveBuffs + (Number(spiritBonus) || 0));
+  }
+
+  function spiritCoefficient(level) {
+    const value = Math.floor(Number(level) || 0);
+    if (value < 10) return 0;
+    const raw = value <= 20
+      ? 0.0003 + ((value - 10) * (value - 1)) / 30000
+      : 0.00663333 + 0.001 * (value - 20);
+    return Math.round(raw * 10000) / 10000;
+  }
+
+  function spiritEffects(level, strength) {
+    const normalizedLevel = Math.max(0, Math.floor(Number(level) || 0));
+    const coefficient = spiritCoefficient(normalizedLevel);
+    const powerPercent = (Number(strength) || 0) * coefficient;
+    return {
+      level: normalizedLevel,
+      coefficient,
+      powerPercent,
+      powerRatio: powerPercent / 100,
+      damage: normalizedLevel >= 20 ? 420 * (normalizedLevel - 10) : 0,
+    };
   }
 
   function dummyLifeFlatBonus(monster, elementAttack, flatBonus) {
@@ -1489,7 +1542,11 @@
       "hotTime",
       s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
     );
-    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
+    const spirit = spiritEffects(s.spiritLevel, s.str);
+    c.spiritLevel = spirit.level;
+    c.spiritCoefficient = spirit.coefficient;
+    c.spiritPower = spirit.powerRatio;
+    c.spiritDamage = spirit.damage;
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
     c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
@@ -1500,7 +1557,7 @@
       const acChanged =
         monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spirit);
+      const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spiritPower);
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const percentWithoutFocus = acWeight * damageIncrease * (buffWeight - c.focus);
@@ -1511,8 +1568,8 @@
       const flatBonus = appliesFlatBonus ? flat : 0;
       const hotTimeWeight = useHot ? 1 + c.hotTime : 1;
       const bossRate = monster.kind === "boss" ? bossCrasherRate(s.jobType) : 1;
-      const mad = base * c.madType * percent * hotTimeWeight + flatBonus;
-      const crasher = base * c.jobType * percent * hotTimeWeight * bossRate + flatBonus;
+      const mad = base * c.madType * percent * hotTimeWeight + flatBonus + c.spiritDamage;
+      const crasher = base * c.jobType * percent * hotTimeWeight * bossRate + flatBonus + c.spiritDamage;
       const skillBase =
         acWeight *
         damageIncrease *
@@ -1520,13 +1577,13 @@
         (Number(s.str) || 0) *
         (Number(s.con) || 0) *
         hotTimeWeight;
-      const fury = skillBase * c.furyLevel + flatBonus;
+      const fury = skillBase * c.furyLevel + flatBonus + c.spiritDamage;
       const jobSkillName = isPureJob ? "대쉬" : "암살";
-      const downFourWayDamage = skillBase * c.furyLevel * c.downFourWayLevel + flatBonus * 2;
+      const downFourWayDamage = skillBase * c.furyLevel * c.downFourWayLevel + (flatBonus + c.spiritDamage) * 2;
       const jobSkillDamage = usesJobSkill
         ? isPureJob
-          ? skillBase * c.dashLevel * c.dashStacks + flatBonus
-          : base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus
+          ? skillBase * c.dashLevel * c.dashStacks + flatBonus + c.spiritDamage
+          : base * 0.1 * 0.375 * percentWithoutFocus * hotTimeWeight + flatBonus + c.spiritDamage
         : 0;
       const totalDamage =
         (damageIncludes.mad ? mad : 0) +
@@ -1591,7 +1648,11 @@
       "hotTime",
       s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
     );
-    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
+    const spirit = spiritEffects(s.spiritLevel, s.str);
+    c.spiritLevel = spirit.level;
+    c.spiritCoefficient = spirit.coefficient;
+    c.spiritPower = spirit.powerRatio;
+    c.spiritDamage = spirit.damage;
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
     c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
@@ -1602,7 +1663,7 @@
       const acChanged =
         monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
       const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spirit);
+      const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spiritPower);
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * damageIncrease * buffWeight;
       const hotTimeWeight = monster.kind !== "boss" ? 1 + c.hotTime : 1;
@@ -1619,11 +1680,11 @@
       const flatBonus = dummyLifeFlatBonus(monster, s.elementAttack, c.flatPhysical);
       const damages = martialTechniqueDefs.reduce((acc, technique) => {
         if (technique.key === "daraLevel") {
-          acc[technique.damageKey] = Math.max(0, currentHp + selectedMana - 1440) * c.daraLevel * percent * hotTimeWeight + flatBonus;
+          acc[technique.damageKey] = Math.max(0, currentHp + selectedMana - 1440) * c.daraLevel * percent * hotTimeWeight + flatBonus + c.spiritDamage;
         } else if (technique.key === "guyangLevel") {
-          acc[technique.damageKey] = currentHp * c.guyangLevel * percent * hotTimeWeight + flatBonus;
+          acc[technique.damageKey] = currentHp * c.guyangLevel * percent * hotTimeWeight + flatBonus + c.spiritDamage;
         } else {
-          acc[technique.damageKey] = skillBase * c[technique.key] + flatBonus;
+          acc[technique.damageKey] = skillBase * c[technique.key] + flatBonus + c.spiritDamage;
         }
         return acc;
       }, {});
@@ -1684,14 +1745,18 @@
       "hotTime",
       s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
     );
-    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
+    const spirit = spiritEffects(s.spiritLevel, s.str);
+    c.spiritLevel = spirit.level;
+    c.spiritCoefficient = spirit.coefficient;
+    c.spiritPower = spirit.powerRatio;
+    c.spiritDamage = spirit.damage;
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
     c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
     const acChangedDummy = 100 + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
     const dummyAcWeight = defenseRate(acChangedDummy);
     const dummyDamageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-    const dummyBuffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, c.spirit);
+    const dummyBuffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, c.spiritPower);
     const dummyHotTimeWeight = 1 + c.hotTime;
     const dummyDivisor = dummyAcWeight * dummyDamageIncrease * dummyBuffWeight * dummyHotTimeWeight;
     const dummyRecognitionDivisor = dummyAcWeight * dummyAcWeight * dummyDamageIncrease * dummyBuffWeight * dummyHotTimeWeight;
@@ -1707,7 +1772,7 @@
     const rows = monsterRows.map((monster) => {
       const acChanged = monster.ac + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
       const rowDamageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-      const rowBuffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, c.spirit);
+      const rowBuffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.trap + c.nar, c.spiritPower);
       const acWeight = defenseRate(acChanged);
       const percent = acWeight * rowDamageIncrease * rowBuffWeight;
       const recognitionPercent = acWeight * acWeight * rowDamageIncrease * rowBuffWeight;
@@ -1717,15 +1782,15 @@
       const flatBonus = dummyLifeFlatBonus(monster, s.elementAttack, c.flatPhysical);
       const damages = activeTechniques.reduce((acc, technique) => {
         const rowPercent = technique.recognition ? recognitionPercent : percent;
-        acc[technique.damageKey] = c[technique.key] * c.ability * rowPercent * hotTimeWeight + flatBonus;
+        acc[technique.damageKey] = c[technique.key] * c.ability * rowPercent * hotTimeWeight + flatBonus + c.spiritDamage;
         return acc;
       }, {});
       if (!isPure) {
-        damages.assassin = base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus;
-        damages.mad = base * 0.1 * 0.5 * percentWithoutFocus * hotTimeWeight + flatBonus;
-        damages.crasher = base * 2 * percent * hotTimeWeight + flatBonus;
+        damages.assassin = base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus + c.spiritDamage;
+        damages.mad = base * 0.1 * 0.5 * percentWithoutFocus * hotTimeWeight + flatBonus + c.spiritDamage;
+        damages.crasher = base * 2 * percent * hotTimeWeight + flatBonus + c.spiritDamage;
       } else {
-        damages.assassin = base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus;
+        damages.assassin = base * c.assassinLevel * percentWithoutFocus * hotTimeWeight + flatBonus + c.spiritDamage;
       }
       const includedKeys = isPure
         ? ["assassin", "stab1", "stab2", "ambush", "snipe", "backstep"]
@@ -1788,7 +1853,11 @@
       "hotTime",
       s.hotTime === "평일" ? 0.15 : s.hotTime === "주말" || s.hotTime === "On" ? 0.2 : 0,
     );
-    c.spirit = applyManual(inputState, "spirit", (Number(s.spirit) || 0) / 100);
+    const spirit = spiritEffects(s.spiritLevel, s.str);
+    c.spiritLevel = spirit.level;
+    c.spiritCoefficient = spirit.coefficient;
+    c.spiritPower = spirit.powerRatio;
+    c.spiritDamage = spirit.damage;
     c.extraElement = applyManual(inputState, "extraElement", equipLevel(s.extraElement, 0.01));
     c.horde = applyManual(inputState, "horde", hordeValue(s.horde));
     c.elementAttack = applyManual(inputState, "elementAttack", crasherElementValue(s.elementAttack, c));
@@ -1796,7 +1865,7 @@
     const acChanged = 100 + c.ring1 + c.ring2 + c.curse + c.arc + c.abre + c.ambush;
     const acWeight = defenseRate(acChanged);
     const damageIncrease = 1 + c.weapon + c.acc1 + c.acc2;
-    const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spirit);
+    const buffWeight = buffWeightWithSpirit(c.elementAttack, c.move + c.focus + c.trap + c.nar, c.spiritPower);
     const hotTimeWeight = 1 + c.hotTime;
     const percent = acWeight * damageIncrease * buffWeight * hotTimeWeight;
     const row = {
@@ -2093,10 +2162,13 @@
       (selectedDummyBuffFactors.has("focus") ? result.conversions.focus || 0 : 0) +
       (selectedDummyBuffFactors.has("trap") ? result.conversions.trap || 0 : 0) +
       (selectedDummyBuffFactors.has("nar") ? result.conversions.nar || 0 : 0);
+    const spiritStrength = Number(skillState.specs?.str) || 0;
+    const dummySpirit = spiritEffects(reverse.dummySpirit, spiritStrength);
+    const targetSpirit = spiritEffects(reverse.targetSpirit, spiritStrength);
     const dummyBuffWeight = buffWeightWithSpirit(
       dummyElementValue,
       dummyBuffAdditive,
-      (Number(reverse.dummySpirit) || 0) / 100,
+      dummySpirit.powerRatio,
     );
     const dummyHotTimeWeight = 1 + (Number(reverse.dummyHotTime) || 0) / 100;
     const acPower = reverse.isRecognition ? 2 : 1;
@@ -2108,7 +2180,7 @@
       (selectedTargetBuffs.has("집중") ? targetFocusWeight : 0) +
       (selectedTargetBuffs.has("나르") ? 1 : 0) +
       (selectedTargetBuffs.has("트랩") ? 1 : 0) +
-      (Number(reverse.targetSpirit) || 0) / 100;
+      targetSpirit.powerRatio;
     const debuffTotal = reverseDebuffTotal(reverse.debuffs, targetAc, targetElementDebuffValue);
     const targetAcWeight = defenseRate(targetAc);
     const targetHotTimeWeight = 1 + (Number(reverse.targetHotTime) || 0) / 100;
@@ -2186,6 +2258,8 @@
 
   function conversionFor(key, result) {
     const map = result.conversions;
+    if (key === "spiritLevel") return (map.spiritPower || 0) * 100;
+    if (key === "spiritDamage") return map.spiritDamage || 0;
     if (state.skill === "thief" && key === "jobType") return "";
     if (state.skill === "thief" && thiefTechniqueDefs.some((technique) => technique.key === key)) return map[key] ?? "";
     if (key === "jobType") return map.jobType;
@@ -2250,6 +2324,8 @@
   }
 
   function conversionSuffix(key) {
+    if (key === "spiritLevel") return "%";
+    if (key === "spiritDamage") return "추뎀";
     if (physicalSkillKeys.has(state.skill) && key === "basePhysical") return "추뎀";
     if ((state.skill === "meteor" || state.skill === "martial" || state.skill === "dummy") && key === "baseMagic") return "1틱";
     if (state.skill === "meteor" && key === "meditation") return "1틱";
@@ -2390,6 +2466,9 @@
   }
 
   function renderInputRow(def, specs, result) {
+    if (def.type === "spiritLevel" || def.type === "spiritDamage") {
+      return renderSpiritInputRow(def, specs, result);
+    }
     const specControl = renderSpecControl(def, specs);
     const converted = conversionFor(def.key, result);
     const binding = convertedBinding(def);
@@ -2410,6 +2489,22 @@
     const factorClass = factorClassName(def.factors);
     const chips = renderFactorDots(def.factors);
     return `<tr class="${factorClass}"><td class="field-label">${def.label}${chips}</td><td>${specControl}</td><td>${convertedControl}</td></tr>`;
+  }
+
+  function renderSpiritInputRow(def, specs, result) {
+    const isLevel = def.type === "spiritLevel";
+    const value = conversionFor(def.key, result);
+    if (!isLevel && !value) return "";
+    const title = isLevel ? "위력증가" : "기술추뎀";
+    const suffix = isLevel ? "%" : "추뎀";
+    const specControl = isLevel
+      ? `<input class="field-control" data-kind="spec" data-key="spiritLevel" type="number" min="0" step="1" value="${formatInputValue(specs.spiritLevel)}" />`
+      : "";
+    return `<tr class="${isLevel ? "input-factor-buff" : ""}">
+      <td class="field-label">${def.label}${renderFactorDots(def.factors)}</td>
+      <td>${specControl}</td>
+      <td><div class="spirit-conversion"><span>${title}</span><strong>${formatConversionInputValue(def.key, value)}${suffix}</strong></div></td>
+    </tr>`;
   }
 
   function renderSpecControl(def, specs) {
@@ -2514,6 +2609,14 @@
         <strong>${formatNumber(estimate.buffWeight, 6)}</strong>
       </div>
       <div class="reverse-output coefficient-output">
+        <span>정령 기술위력증가</span>
+        <strong>${formatNumber(estimate.spirit.powerPercent, 4)}%</strong>
+      </div>
+      <div class="reverse-output coefficient-output">
+        <span>정령 기술추뎀</span>
+        <strong>${formatNumber(estimate.spirit.damage)}</strong>
+      </div>
+      <div class="reverse-output coefficient-output">
         <span>어빌가중치</span>
         <strong>${formatNumber(estimate.abilityWeight, 4)}</strong>
       </div>
@@ -2560,6 +2663,10 @@
             <label class="reverse-field">
               <span>어빌</span>
               <input class="field-control" data-thief-practice-key="ability" type="number" step="any" value="${formatInputValue(entry.ability)}" />
+            </label>
+            <label class="reverse-field">
+              <span>힘</span>
+              <input class="field-control" data-thief-practice-key="str" type="number" step="any" value="${formatInputValue(entry.str)}" />
             </label>
           </div>
         </section>
@@ -2628,8 +2735,8 @@
               <input class="field-control" data-thief-practice-key="hotTime" type="number" step="any" value="${formatInputValue(entry.hotTime)}" />
             </label>
             <label class="reverse-field">
-              <span>정령 %</span>
-              <input class="field-control" data-thief-practice-key="spirit" type="number" step="any" value="${formatInputValue(entry.spirit)}" />
+              <span>정령레벨</span>
+              <input class="field-control" data-thief-practice-key="spiritLevel" type="number" min="0" step="1" value="${formatInputValue(entry.spiritLevel)}" />
             </label>
           </div>
         </section>
@@ -3243,8 +3350,8 @@
                   <input class="field-control" data-estimate-key="dummyHotTime" type="number" step="any" value="${formatInputValue(coefficient.dummyHotTime)}" />
                 </label>
                 <label class="reverse-field">
-                  <span>정령 %</span>
-                  <input class="field-control" data-estimate-key="dummySpirit" type="number" step="any" value="${formatInputValue(coefficient.dummySpirit)}" />
+                  <span>정령레벨</span>
+                  <input class="field-control" data-estimate-key="dummySpirit" type="number" min="0" step="1" value="${formatInputValue(coefficient.dummySpirit)}" />
                 </label>
               </div>
             </fieldset>
@@ -3363,8 +3470,8 @@
               <input class="field-control" data-reverse-key="dummyHotTime" type="number" step="any" value="${formatInputValue(reverse.dummyHotTime)}" />
             </label>
             <label class="reverse-field">
-              <span>정령 %</span>
-              <input class="field-control" data-reverse-key="dummySpirit" type="number" step="any" value="${formatInputValue(reverse.dummySpirit)}" />
+              <span>정령레벨</span>
+              <input class="field-control" data-reverse-key="dummySpirit" type="number" min="0" step="1" value="${formatInputValue(reverse.dummySpirit)}" />
             </label>
           </div>
           <div class="reverse-grid reverse-grid-dummy-factors">
@@ -3419,8 +3526,8 @@
               <input class="field-control" data-reverse-key="targetHotTime" type="number" step="any" value="${formatInputValue(reverse.targetHotTime)}" />
             </label>
             <label class="reverse-field">
-              <span>정령 %</span>
-              <input class="field-control" data-reverse-key="targetSpirit" type="number" step="any" value="${formatInputValue(reverse.targetSpirit)}" />
+              <span>정령레벨</span>
+              <input class="field-control" data-reverse-key="targetSpirit" type="number" min="0" step="1" value="${formatInputValue(reverse.targetSpirit)}" />
             </label>
           </div>
           <div class="reverse-grid reverse-grid-target-factors">
