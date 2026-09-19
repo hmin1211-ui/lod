@@ -1940,14 +1940,14 @@
       {
         key: "damage",
         label: "데미지증가",
-        value: formatNumber(firstRow.damageIncrease, 4),
+        value: formatNumber(firstRow.damageIncrease, 6),
         sub: "장비 공격 증가 합산",
         factors: ["무기", "악세1", "악세2"],
       },
       {
         key: "buff",
         label: "버프가중치",
-        value: formatNumber(firstRow.buffWeight, 4),
+        value: formatNumber(firstRow.buffWeight, 6),
         sub: "속성/상태 버프 합산",
         factors: buffFactors,
       },
@@ -2503,15 +2503,15 @@
       </div>
       <div class="reverse-output coefficient-output">
         <span>AC가중치</span>
-        <strong>${formatNumber(estimate.acWeight, 4)}</strong>
+        <strong>${formatNumber(estimate.acWeight, 6)}</strong>
       </div>
       <div class="reverse-output coefficient-output">
         <span>데미지증가</span>
-        <strong>${formatNumber(estimate.damageIncrease, 4)}</strong>
+        <strong>${formatNumber(estimate.damageIncrease, 6)}</strong>
       </div>
       <div class="reverse-output coefficient-output">
         <span>버프가중치</span>
-        <strong>${formatNumber(estimate.buffWeight, 4)}</strong>
+        <strong>${formatNumber(estimate.buffWeight, 6)}</strong>
       </div>
       <div class="reverse-output coefficient-output">
         <span>어빌가중치</span>
@@ -2698,11 +2698,11 @@
             <td data-label="몬스터">${row.name}${deleteButton}</td>
             <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
             <td data-label="AC변화" class="factor-ac">${formatNumber(row.acChanged, 2)}</td>
-            <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 4)}</td>
-            <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 4)}</td>
-            <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 4)}</td>
+            <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 6)}</td>
+            <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 6)}</td>
+            <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 6)}</td>
             <td data-label="핫타임" class="factor-hot">${formatHotTimeWeight(row.hotTimeWeight)}</td>
-            <td data-label="퍼센트">${formatNumber(row.percent, 4)}</td>
+            <td data-label="퍼센트">${formatNumber(row.percent, 6)}</td>
             <td data-label="매드" class="damage-strong">${formatIncludedCrasherDamage(row, row.mad, damageIncludes.mad)}</td>
             <td data-label="${crasherLabel}" class="damage-strong">${formatIncludedCrasherDamage(row, row.crasher, damageIncludes.crasher)}</td>
             <td data-label="퓨리" class="damage-strong">${formatIncludedCrasherDamage(row, row.fury, damageIncludes.fury)}</td>
@@ -2764,11 +2764,11 @@
             <td data-label="몬스터">${row.name}${deleteButton}</td>
             <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
             <td data-label="AC변화" class="factor-ac">${formatNumber(row.acChanged, 2)}</td>
-            <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 4)}</td>
-            <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 4)}</td>
-            <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 4)}</td>
+            <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 6)}</td>
+            <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 6)}</td>
+            <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 6)}</td>
             <td data-label="핫타임" class="factor-hot">${formatHotTimeWeight(row.hotTimeWeight)}</td>
-            <td data-label="퍼센트">${formatNumber(row.percent, 4)}</td>
+            <td data-label="퍼센트">${formatNumber(row.percent, 6)}</td>
             ${damageCells}
             <td data-label="합계" class="damage-total">${formatNumber(row.totalDamage)}</td>
             <td data-label="비고">${note}</td>
@@ -2855,11 +2855,11 @@
             <td data-label="몬스터">${row.name}${deleteButton}</td>
             <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
             <td data-label="AC변화" class="factor-ac">${formatNumber(row.acChanged, 2)}</td>
-            <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 4)}</td>
-            <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 4)}</td>
-            <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 4)}</td>
+            <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 6)}</td>
+            <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 6)}</td>
+            <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 6)}</td>
             <td data-label="핫타임" class="factor-hot">${formatHotTimeWeight(row.hotTimeWeight)}</td>
-            <td data-label="퍼센트">${formatNumber(row.percent, 4)}</td>
+            <td data-label="퍼센트">${formatNumber(row.percent, 6)}</td>
             ${damageCells}
             <td data-label="합계" class="damage-total">${formatNumber(row.totalDamage)}</td>
             <td data-label="비고">${note}</td>
@@ -2895,11 +2895,11 @@
           <td data-label="몬스터">${row.name}${row.custom ? `<button class="delete-monster" type="button" data-monster-id="${row.id}">삭제</button>` : ""}</td>
           <td data-label="기존 AC">${formatNumber(row.ac, 2)}</td>
           <td data-label="AC변화" class="factor-ac">${formatNumber(row.acChanged, 2)}</td>
-          <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 4)}</td>
-          <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 4)}</td>
-          <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 4)}</td>
+          <td data-label="AC가중치" class="factor-ac">${formatNumber(row.acWeight, 6)}</td>
+          <td data-label="데미지증가" class="factor-damage">${formatNumber(row.damageIncrease, 6)}</td>
+          <td data-label="버프가중치" class="factor-buff">${formatNumber(row.buffWeight, 6)}</td>
           <td data-label="핫타임" class="factor-hot">${formatHotTimeWeight(row.hotTimeWeight)}</td>
-          <td data-label="퍼센트">${formatNumber(row.percent, 4)}</td>
+          <td data-label="퍼센트">${formatNumber(row.percent, 6)}</td>
           <td data-label="1틱+1메디" class="damage-strong">${formatMeteorDamage(row, row.oneTickOneMediDamage)}</td>
           <td data-label="2틱+1메디" class="damage-strong">${formatMeteorDamage(row, row.twoTickOneMediDamage)}</td>
           <td data-label="2틱+2메디" class="damage-strong">${formatMeteorDamage(row, row.twoTickTwoMediDamage)}</td>
@@ -3314,23 +3314,23 @@
       <div class="reverse-metrics">
         <div class="reverse-metric factor-ac">
           <span>허수 AC가중치</span>
-          <strong>${formatNumber(calculation.dummyAcWeight, 4)}</strong>
+          <strong>${formatNumber(calculation.dummyAcWeight, 6)}</strong>
         </div>
         <div class="reverse-metric factor-buff">
           <span>허수 버프가중치</span>
-          <strong>${formatNumber(calculation.dummyBuffWeight, 4)}</strong>
+          <strong>${formatNumber(calculation.dummyBuffWeight, 6)}</strong>
         </div>
         <div class="reverse-metric factor-ac">
           <span>대상 AC가중치</span>
-          <strong>${formatNumber(calculation.acWeight, 4)}</strong>
+          <strong>${formatNumber(calculation.acWeight, 6)}</strong>
         </div>
         <div class="reverse-metric factor-damage">
           <span>장비 데미지증가</span>
-          <strong>${formatNumber(calculation.damageIncrease, 4)}</strong>
+          <strong>${formatNumber(calculation.damageIncrease, 6)}</strong>
         </div>
         <div class="reverse-metric factor-buff">
           <span>대상 버프가중치</span>
-          <strong>${formatNumber(calculation.selectedBuffWeight, 4)}</strong>
+          <strong>${formatNumber(calculation.selectedBuffWeight, 6)}</strong>
         </div>
         <div class="reverse-metric factor-hot">
           <span>디버프가중치</span>
@@ -3338,7 +3338,7 @@
         </div>
         <div class="reverse-metric">
           <span>퍼센트</span>
-          <strong>${formatNumber(calculation.targetPercent, 4)}</strong>
+          <strong>${formatNumber(calculation.targetPercent, 6)}</strong>
         </div>
       </div>
       <div class="reverse-condition-layout">
